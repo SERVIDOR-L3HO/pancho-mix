@@ -195,6 +195,27 @@ async function scrapeYouTubeId(musicaId) {
   }
 }
 
+// ─── YouTube search by artist + title (no API key needed) ────────────────────
+const ytSearchCache = {};  // "artist|title" → youtubeId
+
+async function getYouTubeIdForSong(artist, title) {
+  const key = `${artist}|${title}`.toLowerCase();
+  if (ytSearchCache[key] !== undefined) return ytSearchCache[key];
+  try {
+    const q = `${artist} ${title} official audio`;
+    const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`;
+    const html = await fetchHtml(url, 10000);
+    const matches = html.match(/"videoId":"([a-zA-Z0-9_-]{11})"/g);
+    if (!matches || !matches.length) { ytSearchCache[key] = null; return null; }
+    const ytId = matches[0].replace(/"videoId":"/, "").replace(/"$/, "");
+    ytSearchCache[key] = ytId;
+    return ytId;
+  } catch {
+    ytSearchCache[key] = null;
+    return null;
+  }
+}
+
 // ─── Soundfly.es search ───────────────────────────────────────────────────────
 
 function parseSoundflyBootstrap(html) {
@@ -347,12 +368,26 @@ app.get("/api/search", async (req, res) => {
   }
 });
 
-// GET /api/youtube/:musicaId — lazy-fetch YouTube ID
+// GET /api/youtube/:musicaId — lazy-fetch YouTube ID via musica.com
 app.get("/api/youtube/:musicaId", async (req, res) => {
   const musicaId = parseInt(req.params.musicaId);
   if (isNaN(musicaId)) return res.status(400).json({ error: "Invalid id" });
 
   const ytId = await scrapeYouTubeId(musicaId);
+  if (ytId) {
+    res.json({ youtubeId: ytId, audioUrl: `yt:${ytId}` });
+  } else {
+    res.status(404).json({ youtubeId: null });
+  }
+});
+
+// GET /api/youtube-search?artist=X&title=Y — find YouTube ID by song name
+app.get("/api/youtube-search", async (req, res) => {
+  const artist = (req.query.artist || "").trim();
+  const title = (req.query.title || "").trim();
+  if (!artist || !title) return res.status(400).json({ error: "artist and title required" });
+
+  const ytId = await getYouTubeIdForSong(artist, title);
   if (ytId) {
     res.json({ youtubeId: ytId, audioUrl: `yt:${ytId}` });
   } else {
@@ -659,34 +694,41 @@ async function playSong(song, newQueue){
   highlightRow();
   document.getElementById("playerBar").style.display="flex";
 
-  // If no YouTube ID, try to fetch it
   let ytId = getYtId(song.audioUrl);
-  if(!ytId && song.musicaId){
-    showToast("Buscando video...");
+
+  if(!ytId){
+    showToast("Buscando video en YouTube...");
     try{
-      const r=await fetch("/api/youtube/"+song.musicaId);
-      if(r.ok){
-        const d=await r.json();
-        ytId=d.youtubeId;
-        song.audioUrl="yt:"+ytId;
+      let r, d;
+      if(song.musicaId){
+        // Song from musica.com — look up by numeric ID
+        r=await fetch("/api/youtube/"+song.musicaId);
+      } else {
+        // Song from soundfly/search — look up by artist + title
+        const params=new URLSearchParams({artist:song.artistName||"",title:song.title||""});
+        r=await fetch("/api/youtube-search?"+params);
+      }
+      if(r && r.ok){
+        d=await r.json();
+        if(d.youtubeId){
+          ytId=d.youtubeId;
+          song.audioUrl="yt:"+ytId;
+        }
       }
     }catch{}
   }
 
   if(ytId){
-    if(ytReady && ytPlayer){
-      ytPlayer.loadVideoById(ytId);
-    } else {
-      const wait=()=>{
-        if(ytReady&&ytPlayer){ ytPlayer.loadVideoById(ytId); }
-        else setTimeout(wait,300);
-      };
-      setTimeout(wait,300);
-    }
+    const load=()=>{
+      if(ytReady&&ytPlayer){ ytPlayer.loadVideoById(ytId); }
+      else setTimeout(load,300);
+    };
+    load();
   } else {
-    showToast("No hay audio disponible para esta canción");
+    showToast("No se encontró el audio en YouTube");
     isPlaying=false;
     updatePlayBtn();
+    highlightRow();
   }
 }
 
