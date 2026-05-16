@@ -199,6 +199,11 @@ async function scrapeYouTubeId(musicaId) {
 const ytSearchCache = {};  // "artist|title" → youtubeId
 
 async function getYouTubeIdForSong(artist, title) {
+  const ids = await getYouTubeIdsForSong(artist, title);
+  return ids.length ? ids[0] : null;
+}
+
+async function getYouTubeIdsForSong(artist, title, limit = 8) {
   const key = `${artist}|${title}`.toLowerCase();
   if (ytSearchCache[key] !== undefined) return ytSearchCache[key];
   try {
@@ -206,13 +211,19 @@ async function getYouTubeIdForSong(artist, title) {
     const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`;
     const html = await fetchHtml(url, 10000);
     const matches = html.match(/"videoId":"([a-zA-Z0-9_-]{11})"/g);
-    if (!matches || !matches.length) { ytSearchCache[key] = null; return null; }
-    const ytId = matches[0].replace(/"videoId":"/, "").replace(/"$/, "");
-    ytSearchCache[key] = ytId;
-    return ytId;
+    if (!matches || !matches.length) { ytSearchCache[key] = []; return []; }
+    const seen = new Set();
+    const ids = [];
+    for (const m of matches) {
+      const id = m.replace(/"videoId":"/, "").replace(/"$/, "");
+      if (!seen.has(id)) { seen.add(id); ids.push(id); }
+      if (ids.length >= limit) break;
+    }
+    ytSearchCache[key] = ids;
+    return ids;
   } catch {
-    ytSearchCache[key] = null;
-    return null;
+    ytSearchCache[key] = [];
+    return [];
   }
 }
 
@@ -393,6 +404,16 @@ app.get("/api/youtube-search", async (req, res) => {
   } else {
     res.status(404).json({ youtubeId: null });
   }
+});
+
+// GET /api/youtube-search-multi?artist=X&title=Y — returns multiple candidate IDs
+app.get("/api/youtube-search-multi", async (req, res) => {
+  const artist = (req.query.artist || "").trim();
+  const title = (req.query.title || "").trim();
+  if (!artist || !title) return res.status(400).json({ error: "artist and title required" });
+
+  const ids = await getYouTubeIdsForSong(artist, title);
+  res.json({ youtubeIds: ids });
 });
 
 // ─── HTML Frontend ────────────────────────────────────────────────────────────
@@ -1541,6 +1562,7 @@ const HTML = `<!DOCTYPE html>
 let allSongs=[], queue=[], queueIndex=-1;
 let currentSong=null, isPlaying=false, duration=0, progress=0;
 let ytPlayer=null, ytReady=false, progressInterval=null;
+let ytCandidates=[], ytCandidateIdx=0;
 let currentGenre="trending", currentView="home";
 let searchTimeout=null;
 let playerMode="audio";
@@ -1613,7 +1635,18 @@ window.onYouTubeIframeAPIReady=()=>{
           else nextSong();
         }
       },
-      onError(){ stopProg(); nextSong(); }
+      onError(e){
+        stopProg();
+        // Error 101/150 = embedding not allowed, try next candidate
+        if(ytCandidates.length>0 && ytCandidateIdx<ytCandidates.length-1){
+          ytCandidateIdx++;
+          const nextId=ytCandidates[ytCandidateIdx];
+          if(currentSong){currentSong.audioUrl="yt:"+nextId;}
+          try{ytPlayer.loadVideoById(nextId);}catch{}
+        } else {
+          nextSong();
+        }
+      }
     }
   });
 };
@@ -1798,15 +1831,27 @@ async function playSong(song,newQueue){
   addToRecentlyPlayed(song);
   updateProfileStats();
 
+  ytCandidates=[]; ytCandidateIdx=0;
   let ytId=getYtId(song.audioUrl);
   if(!ytId){
     showToast("Buscando en YouTube...");
     try{
-      let r;
-      if(song.musicaId){r=await fetch("/api/youtube/"+song.musicaId);}
-      else{const p=new URLSearchParams({artist:song.artistName||"",title:song.title||""});r=await fetch("/api/youtube-search?"+p);}
-      if(r?.ok){const d=await r.json();if(d.youtubeId){ytId=d.youtubeId;song.audioUrl="yt:"+ytId;}}
+      if(song.musicaId){
+        const r=await fetch("/api/youtube/"+song.musicaId);
+        if(r?.ok){const d=await r.json();if(d.youtubeId){ytId=d.youtubeId;song.audioUrl="yt:"+ytId;ytCandidates=[ytId];}}
+      } else {
+        const p=new URLSearchParams({artist:song.artistName||"",title:song.title||""});
+        const r=await fetch("/api/youtube-search-multi?"+p);
+        if(r?.ok){const d=await r.json();if(d.youtubeIds&&d.youtubeIds.length){ytCandidates=d.youtubeIds;ytId=ytCandidates[0];song.audioUrl="yt:"+ytId;}}
+      }
     }catch{}
+  } else {
+    // fetch extra candidates in background for fallback
+    if(!song.musicaId){
+      const p=new URLSearchParams({artist:song.artistName||"",title:song.title||""});
+      fetch("/api/youtube-search-multi?"+p).then(r=>r.ok?r.json():null).then(d=>{if(d?.youtubeIds?.length)ytCandidates=d.youtubeIds;}).catch(()=>{});
+    }
+    ytCandidates=[ytId];
   }
   if(ytId){
     const load=()=>{
