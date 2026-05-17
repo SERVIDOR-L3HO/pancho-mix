@@ -761,6 +761,75 @@ app.get("/api/deezer-cover", async (req, res) => {
   }
 });
 
+// ─── Letras.com lyrics scraper ────────────────────────────────────────────────
+const lyricsCache = {};
+
+function toLetrasSlug(str) {
+  return str
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-");
+}
+
+async function scrapeLyricsFromMusicaId(musicaId) {
+  const url = `${BASE_URL}/letras.asp?letra=${musicaId}`;
+  const html = await fetchHtml(url, 12000);
+  const $ = cheerio.load(html);
+  const stanzas = [];
+  $("#letra p").each((_, p) => {
+    const el = $(p);
+    if (el.attr("id") === "widgetLoaded") return;
+    if ((el.attr("style") || "").includes("width:0")) return;
+    const text = el.text().trim();
+    if (text) stanzas.push(text);
+  });
+  return stanzas.length ? stanzas.join("\n\n") : null;
+}
+
+app.get("/api/lyrics", async (req, res) => {
+  const musicaId = (req.query.musicaId || "").trim();
+  const artist   = (req.query.artist   || "").trim();
+  const title    = (req.query.title    || "").trim();
+
+  const key = musicaId || `${artist}|${title}`.toLowerCase();
+  if (!key) return res.status(400).json({ error: "musicaId or artist+title required", found: false });
+  if (lyricsCache[key] !== undefined) return res.json(lyricsCache[key]);
+
+  try {
+    let resolvedId = musicaId;
+
+    // If no musicaId, search musica.com to find it
+    if (!resolvedId && artist && title) {
+      const q = encodeURIComponent(`${artist} ${title}`);
+      const searchHtml = await fetchHtml(`${BASE_URL}/letras.asp?t2=${q}`, 10000);
+      const $s = cheerio.load(searchHtml);
+      const firstHref = $s("a[href*='letra=']").first().attr("href");
+      const m = firstHref && firstHref.match(/letra=(\d+)/);
+      if (m) resolvedId = m[1];
+    }
+
+    if (!resolvedId) {
+      lyricsCache[key] = { lyrics: null, found: false };
+      return res.json({ lyrics: null, found: false });
+    }
+
+    const lyrics = await scrapeLyricsFromMusicaId(resolvedId);
+    const result = {
+      lyrics,
+      found: !!lyrics,
+      source: "musica.com",
+      url: `${BASE_URL}/letras.asp?letra=${resolvedId}`
+    };
+    lyricsCache[key] = result;
+    res.json(result);
+  } catch (err) {
+    lyricsCache[key] = { lyrics: null, found: false };
+    res.json({ lyrics: null, found: false });
+  }
+});
+
 // ─── HTML Frontend ────────────────────────────────────────────────────────────
 
 const HTML = `<!DOCTYPE html>
@@ -1940,6 +2009,42 @@ const HTML = `<!DOCTYPE html>
     .fp-pill:hover{background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.28);}
     .fp-pill.on{background:rgba(168,85,247,.25);border-color:rgba(168,85,247,.55);color:#fff;}
 
+    /* Lyrics panel */
+    .fp-lyrics-panel{
+      display:none;flex-direction:column;
+      margin:0 16px 16px;border-radius:18px;
+      background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);
+      overflow:hidden;flex-shrink:0;
+    }
+    .fp-lyrics-panel.open{display:flex;}
+    .fp-lyrics-hdr{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:13px 18px 10px;border-bottom:1px solid rgba(255,255,255,.06);
+    }
+    .fp-lyrics-title{font-size:.78rem;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:rgba(255,255,255,.5);}
+    .fp-lyrics-src{font-size:.7rem;color:rgba(255,255,255,.28);}
+    .fp-lyrics-body{
+      padding:18px 22px 22px;max-height:340px;overflow-y:auto;
+      font-size:.92rem;line-height:1.85;color:rgba(255,255,255,.82);
+      white-space:pre-wrap;
+    }
+    .fp-lyrics-body::-webkit-scrollbar{width:4px;}
+    .fp-lyrics-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:4px;}
+    .fp-lyrics-loading{
+      display:flex;align-items:center;justify-content:center;gap:10px;
+      padding:36px 0;color:rgba(255,255,255,.4);font-size:.88rem;
+    }
+    .fp-lyrics-spin{
+      width:18px;height:18px;border:2px solid rgba(255,255,255,.15);
+      border-top-color:rgba(168,85,247,.8);border-radius:50%;
+      animation:spin .7s linear infinite;flex-shrink:0;
+    }
+    .fp-lyrics-none{
+      padding:32px 0;text-align:center;
+      color:rgba(255,255,255,.35);font-size:.86rem;
+    }
+    @keyframes spin{to{transform:rotate(360deg);}}
+
     /* Volume row */
     .fp-vol-row{
       display:flex;align-items:center;gap:12px;
@@ -2433,6 +2538,15 @@ const HTML = `<!DOCTYPE html>
       <button class="fp-pill" id="fpQueuePill">☰ Fila</button>
     </div>
 
+    <!-- Lyrics panel -->
+    <div class="fp-lyrics-panel" id="fpLyricsPanel">
+      <div class="fp-lyrics-hdr">
+        <span class="fp-lyrics-title">Letra</span>
+        <span class="fp-lyrics-src" id="fpLyricsSrc"></span>
+      </div>
+      <div id="fpLyricsBody"></div>
+    </div>
+
     <!-- Progress -->
     <div class="fp-prog-wrap">
       <div class="fp-prog-track" id="fpProgTrack">
@@ -2887,6 +3001,8 @@ function returnVideoToHolder(){
 
 async function playSong(song,newQueue){
   currentSong=song;
+  lyricsSongKey=null;
+  if(lyricsOpen) loadLyrics(song);
   if(newQueue){
     queue=shuffleOn?shuffleArr([...newQueue]):newQueue;
     queueIndex=queue.findIndex(s=>s.id===song.id);
@@ -3258,10 +3374,59 @@ document.getElementById("fpHeartBtn").addEventListener("click",()=>{
   toggleLikeSong(currentSong);
 });
 
+// ── Lyrics panel ──────────────────────────────────────────────────────────────
+let lyricsOpen = false;
+let lyricsSongKey = null;
+
+function showLyricsLoading(){
+  document.getElementById("fpLyricsBody").innerHTML =
+    '<div class="fp-lyrics-loading"><div class="fp-lyrics-spin"></div>Cargando letra…</div>';
+  document.getElementById("fpLyricsSrc").textContent = "";
+}
+
+function showLyricsContent(lyrics, url){
+  if(!lyrics){
+    document.getElementById("fpLyricsBody").innerHTML =
+      '<div class="fp-lyrics-none">No se encontró la letra de esta canción.</div>';
+    document.getElementById("fpLyricsSrc").textContent = "";
+    return;
+  }
+  const escaped = lyrics.replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  document.getElementById("fpLyricsBody").innerHTML =
+    '<div class="fp-lyrics-body">'+escaped+'</div>';
+  document.getElementById("fpLyricsSrc").textContent = "musica.com";
+}
+
+async function loadLyrics(song){
+  const key = (song.musicaId || (song.artistName+"|"+song.title)).toLowerCase();
+  if(lyricsSongKey === key) return;
+  lyricsSongKey = key;
+  showLyricsLoading();
+  try{
+    let url;
+    if(song.musicaId){
+      url = "/api/lyrics?musicaId="+encodeURIComponent(song.musicaId);
+    } else {
+      url = "/api/lyrics?artist="+encodeURIComponent(song.artistName)+"&title="+encodeURIComponent(song.title);
+    }
+    const r = await fetch(url);
+    const data = await r.json();
+    showLyricsContent(data.found ? data.lyrics : null, data.url);
+  }catch(e){
+    showLyricsContent(null, null);
+  }
+}
+
 document.getElementById("fpLyricsPill").addEventListener("click",()=>{
-  if(currentSong){
-    const q=encodeURIComponent(currentSong.title+" "+currentSong.artistName+" letra");
-    window.open("https://www.google.com/search?q="+q,"_blank","noopener");
+  if(!currentSong) return;
+  lyricsOpen = !lyricsOpen;
+  const panel = document.getElementById("fpLyricsPanel");
+  const pill  = document.getElementById("fpLyricsPill");
+  panel.classList.toggle("open", lyricsOpen);
+  pill.classList.toggle("on", lyricsOpen);
+  if(lyricsOpen){
+    loadLyrics(currentSong);
+    panel.scrollIntoView({behavior:"smooth", block:"nearest"});
   }
 });
 document.getElementById("fpQueuePill").addEventListener("click",()=>{
