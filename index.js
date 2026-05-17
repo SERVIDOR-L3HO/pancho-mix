@@ -1747,7 +1747,11 @@ const HTML = `<!DOCTYPE html>
       background:rgba(255,255,255,.06);
       transition:transform .3s,box-shadow .3s;
     }
-    .fp-art.playing{transform:scale(1.02);box-shadow:0 40px 100px rgba(0,0,0,.7);}
+    .fp-art.playing{transform:scale(1.02);animation:art-glow 3s ease-in-out infinite alternate;}
+    @keyframes art-glow{
+      from{box-shadow:0 36px 90px rgba(0,0,0,.7),0 0 40px rgba(168,85,247,.25);}
+      to{box-shadow:0 44px 110px rgba(0,0,0,.75),0 0 80px rgba(168,85,247,.5);}
+    }
     .fp-art img{width:100%;height:100%;object-fit:cover;display:block;}
     .fp-art-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:5rem;background:linear-gradient(135deg,rgba(168,85,247,.25),rgba(99,102,241,.25));}
     .fp-video-wrap{
@@ -1779,22 +1783,51 @@ const HTML = `<!DOCTYPE html>
     }
     .fp-heart-btn.liked{background:rgba(236,72,153,.2);border-color:rgba(236,72,153,.6);color:#ec4899;}
 
+    /* Info title row */
+    .fp-title-row{display:flex;align-items:center;gap:8px;}
+
+    /* Equalizer bars */
+    .fp-eq{display:none;align-items:flex-end;gap:2px;height:16px;flex-shrink:0;}
+    .fp-eq.active{display:flex;}
+    .fp-eq-bar{width:3px;border-radius:2px;background:linear-gradient(to top,var(--p2),var(--p));animation:eq-bounce 1.1s ease-in-out infinite;}
+    .fp-eq-bar:nth-child(1){height:8px;animation-delay:0s;}
+    .fp-eq-bar:nth-child(2){height:14px;animation-delay:.18s;}
+    .fp-eq-bar:nth-child(3){height:10px;animation-delay:.09s;}
+    .fp-eq-bar:nth-child(4){height:16px;animation-delay:.27s;}
+    @keyframes eq-bounce{0%,100%{transform:scaleY(.35);}50%{transform:scaleY(1);}}
+
     /* Action pills */
     .fp-actions{
-      display:flex;align-items:center;gap:6px;
-      padding:6px 20px 14px;overflow-x:auto;
+      display:flex;align-items:center;gap:8px;
+      padding:6px 22px 14px;overflow-x:auto;
     }
     .fp-actions::-webkit-scrollbar{display:none;}
     .fp-pill{
-      display:flex;align-items:center;gap:5px;
-      padding:8px 15px;border-radius:50px;
-      border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.07);
-      color:rgba(255,255,255,.8);font-size:.8rem;font-weight:600;
+      display:flex;align-items:center;gap:6px;
+      padding:9px 20px;border-radius:50px;
+      border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.07);
+      color:rgba(255,255,255,.85);font-size:.82rem;font-weight:600;
       cursor:pointer;transition:all .18s;white-space:nowrap;flex-shrink:0;
-      font-family:inherit;backdrop-filter:blur(8px);
+      font-family:inherit;backdrop-filter:blur(12px);
     }
-    .fp-pill:hover{background:rgba(255,255,255,.14);color:#fff;border-color:rgba(255,255,255,.25);}
-    .fp-pill.on{background:rgba(168,85,247,.2);border-color:rgba(168,85,247,.5);color:#fff;}
+    .fp-pill:hover{background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.28);}
+    .fp-pill.on{background:rgba(168,85,247,.25);border-color:rgba(168,85,247,.55);color:#fff;}
+
+    /* Volume row */
+    .fp-vol-row{
+      display:flex;align-items:center;gap:12px;
+      padding:0 26px 18px;
+    }
+    .fp-vol-row svg{color:rgba(255,255,255,.38);flex-shrink:0;}
+    .fp-vol-slider{
+      flex:1;-webkit-appearance:none;height:4px;
+      background:rgba(255,255,255,.14);border-radius:4px;outline:none;cursor:pointer;
+    }
+    .fp-vol-slider::-webkit-slider-thumb{
+      -webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+      background:linear-gradient(135deg,var(--p),var(--p2));
+      box-shadow:0 2px 10px rgba(168,85,247,.6);cursor:pointer;
+    }
 
     /* Progress */
     .fp-prog-wrap{padding:0 24px 4px;}
@@ -1834,14 +1867,14 @@ const HTML = `<!DOCTYPE html>
     .fp-ctrl.on{color:var(--p);}
     .fp-ctrl.on svg{filter:drop-shadow(0 0 6px rgba(168,85,247,.8));}
     .fp-play-btn{
-      width:66px;height:66px;border-radius:50%;
-      border:none;background:#fff;color:#0a0a14;
+      width:72px;height:72px;border-radius:50%;
+      border:none;background:linear-gradient(135deg,var(--p),var(--p2));color:#fff;
       display:flex;align-items:center;justify-content:center;
-      cursor:pointer;transition:all .2s;
-      box-shadow:0 8px 32px rgba(255,255,255,.2);
+      cursor:pointer;transition:all .22s;
+      box-shadow:0 8px 36px rgba(168,85,247,.55);
     }
-    .fp-play-btn:hover{transform:scale(1.06);box-shadow:0 12px 40px rgba(255,255,255,.3);}
-    .fp-play-btn:active{transform:scale(.94);}
+    .fp-play-btn:hover{transform:scale(1.07);box-shadow:0 14px 48px rgba(168,85,247,.75);}
+    .fp-play-btn:active{transform:scale(.93);}
 
     /* Queue */
     .fp-queue{margin:4px 16px 24px;border-radius:18px;overflow:hidden;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);}
@@ -2251,7 +2284,15 @@ const HTML = `<!DOCTYPE html>
     <!-- Info -->
     <div class="fp-info">
       <div class="fp-info-left">
-        <div class="fp-title" id="fpTitle">—<span class="fp-title-chevron">›</span></div>
+        <div class="fp-title-row">
+          <div class="fp-title" id="fpTitle">—<span class="fp-title-chevron">›</span></div>
+          <div class="fp-eq" id="fpEq">
+            <div class="fp-eq-bar"></div>
+            <div class="fp-eq-bar"></div>
+            <div class="fp-eq-bar"></div>
+            <div class="fp-eq-bar"></div>
+          </div>
+        </div>
         <div class="fp-artist" id="fpArtist">—</div>
       </div>
       <button class="fp-heart-btn" id="fpHeartBtn">
@@ -2261,10 +2302,7 @@ const HTML = `<!DOCTYPE html>
 
     <!-- Action pills -->
     <div class="fp-actions">
-      <button class="fp-pill" id="fpLikePill">👍 <span id="fpLikeNum">400 k</span></button>
-      <button class="fp-pill" id="fpDislikePill">👎</button>
       <button class="fp-pill" id="fpLyricsPill">🎵 Letra</button>
-      <button class="fp-pill" id="fpCommentsPill">💬 <span id="fpCommentsNum">879</span></button>
       <button class="fp-pill" id="fpQueuePill">☰ Fila</button>
     </div>
 
@@ -2299,6 +2337,13 @@ const HTML = `<!DOCTYPE html>
       <button class="fp-ctrl" id="fpRepeat" title="Repetir">
         <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
       </button>
+    </div>
+
+    <!-- Volume -->
+    <div class="fp-vol-row">
+      <svg width="15" height="15" fill="currentColor" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5zm4.5 3.5a5 5 0 0 1 0 7"/></svg>
+      <input type="range" class="fp-vol-slider" id="fpVolSlider" min="0" max="1" step="0.02" value="1">
+      <svg width="15" height="15" fill="currentColor" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5zm4.5 3.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>
     </div>
 
     <!-- Queue section -->
@@ -2574,6 +2619,7 @@ function syncPlayBtns(){
   document.getElementById("fpIconPlay").style.display=isPlaying?"none":"block";
   document.getElementById("fpIconPause").style.display=isPlaying?"block":"none";
   document.getElementById("fpArt").classList.toggle("playing",isPlaying);
+  document.getElementById("fpEq").classList.toggle("active",isPlaying);
 }
 
 function syncRepeatBtn(){
@@ -2625,12 +2671,6 @@ function updateFullPlayer(){
   const pct=duration>0?(progress/duration*100):0;
   document.getElementById("fpProgFill").style.width=pct+"%";
 
-  const seed=currentSong.id?currentSong.id.toString().split("").reduce((a,c)=>a+c.charCodeAt(0),0):9999;
-  const likes=Math.floor((seed%400+50)*1000);
-  const comments=Math.floor(seed%3000+200);
-  document.getElementById("fpLikeNum").textContent=fmtPlays(likes);
-  document.getElementById("fpCommentsNum").textContent=comments.toLocaleString();
-
   const artEl=document.getElementById("fpArt");
   const artPh=document.getElementById("fpArtPh");
   if(currentSong.albumCover){
@@ -2645,7 +2685,6 @@ function updateFullPlayer(){
 
   liked=isLiked(currentSong.id);
   document.getElementById("fpHeartBtn").classList.toggle("liked",liked);
-  document.getElementById("fpLikePill").classList.toggle("on",liked);
   document.getElementById("fpShuffle").classList.toggle("on",shuffleOn);
   syncRepeatBtn();
 }
@@ -3064,25 +3103,21 @@ document.getElementById("fpHeartBtn").addEventListener("click",()=>{
   toggleLikeSong(currentSong);
 });
 
-document.getElementById("fpLikePill").addEventListener("click",()=>{
-  if(!currentSong)return;
-  toggleLikeSong(currentSong);
-});
-document.getElementById("fpDislikePill").addEventListener("click",function(){
-  this.classList.toggle("on");
-  showToast(this.classList.contains("on")?"Gracias por tu opinión":"Feedback eliminado");
-});
 document.getElementById("fpLyricsPill").addEventListener("click",()=>{
   if(currentSong){
     const q=encodeURIComponent(currentSong.title+" "+currentSong.artistName+" letra");
     window.open("https://www.google.com/search?q="+q,"_blank","noopener");
   }
 });
-document.getElementById("fpCommentsPill").addEventListener("click",()=>{
-  if(currentSong){openShareModal(currentSong);}
-});
 document.getElementById("fpQueuePill").addEventListener("click",()=>{
   document.querySelector(".fp-queue").scrollIntoView({behavior:"smooth"});
+});
+
+document.getElementById("fpVolSlider").addEventListener("input",function(){
+  const vol=parseFloat(this.value);
+  try{if(ytPlayer&&ytReady)ytPlayer.setVolume(vol*100);}catch{}
+  const miniSlider=document.getElementById("volSlider");
+  if(miniSlider)miniSlider.value=vol;
 });
 document.getElementById("fpShareBtn").addEventListener("click",()=>{
   if(currentSong)openShareModal(currentSong);
