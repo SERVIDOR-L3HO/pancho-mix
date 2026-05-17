@@ -453,6 +453,55 @@ app.get("/api/youtube-search", async (req, res) => {
   }
 });
 
+// GET /api/artist-profile?deezerId=X&name=Y — top tracks + artist info
+const artistTopCache = {};
+app.get("/api/artist-profile", async (req, res) => {
+  const deezerId = req.query.deezerId;
+  const name = (req.query.name || "").trim();
+  if (!deezerId && !name) return res.status(400).json({ error: "deezerId or name required" });
+
+  const cacheKey = deezerId || name.toLowerCase();
+  if (artistTopCache[cacheKey]) return res.json(artistTopCache[cacheKey]);
+
+  try {
+    // Resolve deezer ID if not provided
+    let id = deezerId;
+    let artistInfo = null;
+    if (!id && name) {
+      artistInfo = await fetchArtistInfo(name);
+      id = artistInfo?.id;
+    } else {
+      artistInfo = await fetchArtistInfo(name || "");
+    }
+    if (!id) return res.status(404).json({ error: "Artist not found" });
+
+    const topRes = await fetch(`https://api.deezer.com/artist/${id}/top?limit=15`, {
+      headers: { "User-Agent": USER_AGENT }
+    });
+    if (!topRes.ok) throw new Error("Deezer top tracks error");
+    const topData = await topRes.json();
+    const tracks = (topData.data || []).map((t, i) => ({
+      id: `dz-${t.id}`,
+      musicaId: null,
+      title: t.title,
+      artistName: t.artist?.name || name,
+      albumCover: t.album?.cover_xl || t.album?.cover_big || t.album?.cover_medium || null,
+      albumTitle: t.album?.title || "",
+      audioUrl: null,
+      genre: "Pop",
+      duration: t.duration || 210,
+      rank: t.rank || 0,
+      position: i + 1
+    }));
+
+    const result = { artist: artistInfo, tracks };
+    artistTopCache[cacheKey] = result;
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /api/youtube-search-multi?artist=X&title=Y — returns multiple candidate IDs
 app.get("/api/youtube-search-multi", async (req, res) => {
   const artist = (req.query.artist || "").trim();
@@ -478,6 +527,7 @@ async function fetchArtistInfo(name) {
     const a = data?.data?.[0];
     if (!a) { artistInfoCache[key] = null; return null; }
     const info = {
+      id: a.id,
       name: a.name,
       image: a.picture_xl || a.picture_big || a.picture_medium || null,
       fans: a.nb_fan || 0
@@ -1019,8 +1069,9 @@ const HTML = `<!DOCTYPE html>
       backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);
       border:1px solid rgba(255,255,255,.1);
       border-radius:24px;padding:28px 20px 22px;margin-bottom:24px;
-      text-align:center;
+      text-align:center;cursor:pointer;transition:background .18s;
     }
+    .artist-card:hover{background:rgba(255,255,255,.1);}
     .artist-avatar{
       width:96px;height:96px;border-radius:50%;object-fit:cover;
       flex-shrink:0;margin-bottom:14px;
@@ -1054,6 +1105,126 @@ const HTML = `<!DOCTYPE html>
       cursor:pointer;flex:1;transition:background .15s;
     }
     .artist-btn-radio:hover{background:rgba(255,255,255,.2);}
+
+    /* ── ARTIST PROFILE PAGE ── */
+    .artist-profile{position:relative;min-height:100%;}
+    .artist-hero{
+      position:relative;width:100%;height:280px;
+      overflow:hidden;flex-shrink:0;
+    }
+    .artist-hero-bg{
+      position:absolute;inset:0;width:100%;height:100%;
+      object-fit:cover;object-position:center top;
+      filter:brightness(.75);
+    }
+    .artist-hero-bg-ph{
+      position:absolute;inset:0;
+      background:linear-gradient(135deg,rgba(168,85,247,.6),rgba(99,102,241,.4),rgba(8,8,15,1));
+    }
+    .artist-hero-gradient{
+      position:absolute;inset:0;
+      background:linear-gradient(to bottom,rgba(0,0,0,.18) 0%,rgba(8,8,15,.0) 40%,rgba(8,8,15,.92) 85%,var(--bg) 100%);
+    }
+    .artist-hero-back{
+      position:absolute;top:16px;left:16px;z-index:10;
+      width:36px;height:36px;border-radius:50%;
+      background:rgba(0,0,0,.45);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+      border:none;display:flex;align-items:center;justify-content:center;
+      cursor:pointer;color:#fff;transition:background .15s;
+    }
+    .artist-hero-back:hover{background:rgba(0,0,0,.65);}
+    .artist-hero-info{
+      position:absolute;bottom:18px;left:18px;right:18px;z-index:5;
+    }
+    .artist-hero-name{
+      font-size:2rem;font-weight:900;color:#fff;
+      letter-spacing:-.02em;line-height:1.1;
+      text-shadow:0 2px 16px rgba(0,0,0,.6);
+    }
+    .artist-hero-fans{
+      font-size:.8rem;color:rgba(255,255,255,.75);margin-top:5px;font-weight:500;
+    }
+    .artist-profile-actions{
+      display:flex;align-items:center;gap:12px;
+      padding:16px 18px 8px;
+    }
+    .ap-btn-follow{
+      background:transparent;border:1.5px solid rgba(255,255,255,.5);
+      border-radius:50px;padding:8px 22px;font-size:.84rem;font-weight:700;
+      color:#fff;cursor:pointer;transition:border-color .15s,color .15s;
+      flex-shrink:0;
+    }
+    .ap-btn-follow:hover{border-color:#fff;}
+    .ap-btn-more{
+      background:none;border:none;color:rgba(255,255,255,.55);
+      font-size:1.3rem;cursor:pointer;padding:6px;flex-shrink:0;
+      transition:color .15s;
+    }
+    .ap-btn-more:hover{color:#fff;}
+    .ap-spacer{flex:1;}
+    .ap-btn-shuffle{
+      background:none;border:none;color:rgba(255,255,255,.6);cursor:pointer;
+      padding:6px;transition:color .15s;flex-shrink:0;
+    }
+    .ap-btn-shuffle:hover{color:#fff;}
+    .ap-btn-play{
+      width:52px;height:52px;border-radius:50%;
+      background:#fff;border:none;
+      display:flex;align-items:center;justify-content:center;
+      cursor:pointer;flex-shrink:0;
+      transition:background .15s,transform .12s;
+      box-shadow:0 4px 20px rgba(0,0,0,.4);
+    }
+    .ap-btn-play:hover{background:#e8e8e8;transform:scale(1.05);}
+    .artist-profile-tabs{
+      display:flex;gap:0;padding:0 18px;margin-bottom:4px;
+      border-bottom:1px solid rgba(255,255,255,.08);
+    }
+    .ap-tab{
+      font-size:.9rem;font-weight:600;color:var(--muted);
+      padding:10px 14px;cursor:pointer;border-bottom:2.5px solid transparent;
+      transition:color .15s,border-color .15s;margin-bottom:-1px;
+    }
+    .ap-tab.active{color:#fff;border-bottom-color:#fff;}
+    .artist-popular-label{
+      font-size:1.1rem;font-weight:800;color:#fff;
+      padding:16px 18px 10px;letter-spacing:-.01em;
+    }
+    .ap-track-row{
+      display:flex;align-items:center;gap:14px;
+      padding:8px 18px;cursor:pointer;transition:background .15s;border-radius:10px;
+    }
+    .ap-track-row:hover{background:rgba(255,255,255,.07);}
+    .ap-track-num{
+      width:20px;text-align:right;font-size:.9rem;color:var(--muted);
+      font-weight:500;flex-shrink:0;
+    }
+    .ap-track-cover{
+      width:50px;height:50px;border-radius:8px;object-fit:cover;
+      flex-shrink:0;box-shadow:0 2px 10px rgba(0,0,0,.3);
+    }
+    .ap-track-cover-ph{
+      width:50px;height:50px;border-radius:8px;flex-shrink:0;
+      background:linear-gradient(135deg,rgba(168,85,247,.3),rgba(99,102,241,.3));
+      display:flex;align-items:center;justify-content:center;font-size:1.3rem;
+    }
+    .ap-track-info{flex:1;min-width:0;}
+    .ap-track-title{
+      font-size:.93rem;font-weight:600;color:#fff;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    }
+    .ap-track-title.playing{color:var(--p);}
+    .ap-track-sub{
+      font-size:.74rem;color:var(--muted);margin-top:2px;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    }
+    .ap-track-dots{
+      background:none;border:none;color:rgba(255,255,255,.35);
+      font-size:1.2rem;cursor:pointer;padding:6px;flex-shrink:0;
+      transition:color .15s;border-radius:6px;
+    }
+    .ap-track-dots:hover{color:#fff;background:rgba(255,255,255,.07);}
+    .ap-loading{text-align:center;padding:50px 20px;color:var(--muted);font-size:.9rem;}
 
     /* ── DESKTOP OVERRIDES ── */
     @media(min-width:768px){
@@ -2835,11 +3006,16 @@ function renderResults(songs, query, artist){
       \${songRows}
       <div style="padding-bottom:36px"></div>
     \`;
-    area.querySelector("#artistBtnShuffle").addEventListener("click",()=>{
+    area.querySelector(".artist-card").addEventListener("click",e=>{
+      if(e.target.closest("#artistBtnShuffle")||e.target.closest("#artistBtnRadio"))return;
+      openArtistProfile(artist);
+    });
+    area.querySelector("#artistBtnShuffle").addEventListener("click",e=>{
+      e.stopPropagation();
       const shuffled=[...songs].sort(()=>Math.random()-.5);
       playSong(shuffled[0],shuffled);
     });
-    area.querySelector("#artistBtnRadio").addEventListener("click",()=>playSong(songs[0],songs));
+    area.querySelector("#artistBtnRadio").addEventListener("click",e=>{e.stopPropagation();playSong(songs[0],songs);});
     area.querySelectorAll(".search-result-row").forEach(row=>{
       const i=parseInt(row.dataset.index);
       row.addEventListener("click",()=>playSong(songs[i],songs));
@@ -2968,6 +3144,90 @@ async function doSearch(q){
 
 function syncChips(genre){
   document.querySelectorAll(".chip").forEach(c=>c.classList.toggle("active",c.dataset.genre===genre));
+}
+
+// ─── Artist Profile ────────────────────────────────────────────────────────────
+let artistProfileBack=null;
+
+async function openArtistProfile(artist){
+  artistProfileBack=currentView;
+  const content=document.getElementById("mainContent");
+  content.innerHTML=\`<div class="ap-loading"><div class="spinner"></div> Cargando artista…</div>\`;
+  try{
+    const params=new URLSearchParams({name:artist.name||\"\",deezerId:artist.id||\"\",});
+    const res=await fetch("/api/artist-profile?"+params);
+    const data=await res.json();
+    renderArtistProfile(data.artist||artist, data.tracks||[]);
+  }catch(e){
+    content.innerHTML=\`<div class="ap-loading">Error al cargar el artista</div>\`;
+  }
+}
+
+function renderArtistProfile(artist, tracks){
+  const content=document.getElementById("mainContent");
+  const heroBg=artist.image
+    ?\`<img class="artist-hero-bg" src="\${esc(artist.image)}" loading="eager">\`
+    :\`<div class="artist-hero-bg-ph"></div>\`;
+  const fansStr=artist.fans?fmtFans(artist.fans):\"\";
+  const trackRows=tracks.map((t,i)=>{
+    const cover=t.albumCover
+      ?\`<img class="ap-track-cover" src="\${esc(t.albumCover)}" loading="lazy" onerror="this.outerHTML='<div class=ap-track-cover-ph>🎵</div>'">\`
+      :\`<div class="ap-track-cover-ph">🎵</div>\`;
+    const isPlaying=currentSong&&currentSong.id===t.id;
+    return \`<div class="ap-track-row" data-index="\${i}">
+      <div class="ap-track-num">\${i+1}</div>
+      \${cover}
+      <div class="ap-track-info">
+        <div class="ap-track-title\${isPlaying?" playing":""}">\${esc(t.title)}</div>
+        <div class="ap-track-sub">Canción\${t.albumTitle?" · "+esc(t.albumTitle):""}</div>
+      </div>
+      <button class="ap-track-dots" title="Más opciones">⋮</button>
+    </div>\`;
+  }).join("");
+  content.innerHTML=\`
+    <div class="artist-profile">
+      <div class="artist-hero">
+        \${heroBg}
+        <div class="artist-hero-gradient"></div>
+        <button class="artist-hero-back" id="apBackBtn">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="artist-hero-info">
+          <div class="artist-hero-name">\${esc(artist.name)}</div>
+          \${fansStr?\`<div class="artist-hero-fans">\${esc(fansStr)}</div>\`:""}
+        </div>
+      </div>
+      <div class="artist-profile-actions">
+        <button class="ap-btn-follow">Seguir</button>
+        <button class="ap-btn-more">⋯</button>
+        <div class="ap-spacer"></div>
+        <button class="ap-btn-shuffle" id="apShuffleBtn" title="Aleatorio">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+        </button>
+        <button class="ap-btn-play" id="apPlayBtn">
+          <svg width="22" height="22" fill="#000" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        </button>
+      </div>
+      <div class="artist-profile-tabs">
+        <div class="ap-tab active">Música</div>
+      </div>
+      <div class="artist-popular-label">Populares</div>
+      \${trackRows}
+      <div style="padding-bottom:36px"></div>
+    </div>
+  \`;
+  content.querySelector("#apBackBtn").addEventListener("click",()=>setView(artistProfileBack||"search"));
+  content.querySelector("#apPlayBtn").addEventListener("click",()=>{if(tracks.length)playSong(tracks[0],tracks);});
+  content.querySelector("#apShuffleBtn").addEventListener("click",()=>{
+    if(!tracks.length)return;
+    const sh=[...tracks].sort(()=>Math.random()-.5);
+    playSong(sh[0],sh);
+  });
+  content.querySelectorAll(".ap-track-row").forEach(row=>{
+    const i=parseInt(row.dataset.index);
+    row.addEventListener("click",()=>playSong(tracks[i],tracks));
+    row.querySelector(".ap-track-dots").addEventListener("click",e=>{e.stopPropagation();openCtxMenu(e,tracks[i]);});
+  });
 }
 
 // ─── Navigation ────────────────────────────────────────────────────────────────
