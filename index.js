@@ -1976,6 +1976,37 @@ async function enrichCoverFromDeezer(song){
   }catch{}
 }
 
+async function enrichListCovers(songs){
+  if(!songs||!songs.length)return;
+  // Only enrich songs that need it (musica.com covers or null)
+  const needsEnrich=songs.filter(s=>!s.artistName||!s.title?false:
+    (!s.albumCover||s.albumCover.includes("musicaimg.com")));
+  if(!needsEnrich.length)return;
+  // Process in batches of 3 concurrent requests to avoid hammering Deezer
+  const CONCURRENCY=3;
+  for(let i=0;i<needsEnrich.length;i+=CONCURRENCY){
+    const batch=needsEnrich.slice(i,i+CONCURRENCY);
+    await Promise.all(batch.map(async song=>{
+      try{
+        const p=new URLSearchParams({artist:song.artistName,title:song.title});
+        const r=await fetch("/api/deezer-cover?"+p);
+        if(!r.ok)return;
+        const d=await r.json();
+        if(!d.cover)return;
+        song.albumCover=d.cover;
+        // Update all img elements with this song's id in the DOM
+        document.querySelectorAll(\`[data-song-id="\${song.id}"] img\`).forEach(el=>{
+          el.src=d.cover;
+        });
+        // If it's the currently playing song, also update player UI
+        if(currentSong&&currentSong.id===song.id){
+          applyCoverToUI(song,d.cover);
+        }
+      }catch{}
+    }));
+  }
+}
+
 // ─── Context Menu ──────────────────────────────────────────────────────────────
 function openCtxMenu(e,song){
   e.preventDefault(); e.stopPropagation();
@@ -2275,7 +2306,7 @@ function fmtPlays(n){n=n||Math.floor(Math.random()*90+10)*1000000;if(n>=1e9)retu
 // ─── Song row HTML ─────────────────────────────────────────────────────────────
 function songRowHtml(s,i){
   const lk=isLiked(s.id);
-  return \`<div class="song-row" data-id="\${s.id}" data-index="\${i}">
+  return \`<div class="song-row" data-id="\${s.id}" data-song-id="\${s.id}" data-index="\${i}">
     \${s.albumCover?\`<img class="row-cover" src="\${esc(s.albumCover)}" loading="lazy" onerror="this.outerHTML='<div class=row-cover-ph>♪</div>'">\`:\`<div class="row-cover-ph">♪</div>\`}
     <svg class="row-verify" width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
     <div class="row-info">
@@ -2333,7 +2364,7 @@ function renderHome(songs, gridSongs){
     <div class="sec">
       <div class="sec-hdr"><div class="sec-title">Volver a escuchar</div></div>
       <div class="album-grid">\${grid.slice(0,6).map((s,i)=>\`
-        <div class="album-card" data-index="\${top.length+i}">
+        <div class="album-card" data-song-id="\${s.id}" data-index="\${top.length+i}">
           \${s.albumCover?\`<img src="\${esc(s.albumCover)}" loading="lazy" onerror="this.style.display='none'">\`:\`<div class="album-card-ph">🎵</div>\`}
           <div class="album-card-overlay"><div class="album-card-title">\${esc(s.title)}</div></div>
           <div class="album-card-arrow">▶</div>
@@ -2346,7 +2377,7 @@ function renderHome(songs, gridSongs){
         <button class="sec-action" id="shuffleAllBtn">🔀 Aleatorio</button>
       </div>
       <div class="hscroll">\${horiz.map((s,i)=>\`
-        <div class="hcard" data-index="\${i}">
+        <div class="hcard" data-song-id="\${s.id}" data-index="\${i}">
           <div class="hcard-img">\${s.albumCover?\`<img src="\${esc(s.albumCover)}" loading="lazy" onerror="this.style.display='none'">\`:\`<div class="hcard-img-ph">🎵</div>\`}</div>
           <div class="hcard-title">\${esc(s.title)}</div>
           <div class="hcard-sub">\${esc(s.artistName)}</div>
@@ -2384,6 +2415,7 @@ function renderHome(songs, gridSongs){
   });
 
   highlightRows();
+  enrichListCovers(songs);
 }
 
 function renderSearch(){
@@ -2412,6 +2444,7 @@ function renderResults(songs, query){
     row.querySelector(".row-dots").addEventListener("click",e=>{e.stopPropagation();openCtxMenu(e,songs[parseInt(row.dataset.index)]);});
   });
   highlightRows();
+  enrichListCovers(songs);
 }
 
 function renderLibrary(){
@@ -2441,6 +2474,7 @@ function renderLibrary(){
   });
   content.querySelector("#libPlayAllBtn")?.addEventListener("click",()=>{if(likedSongs.length)playSong(likedSongs[0],likedSongs);});
   highlightRows();
+  enrichListCovers(likedSongs);
 }
 
 function renderEmpty(msg){
