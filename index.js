@@ -477,32 +477,72 @@ app.get("/api/dice", async (req, res) => {
   }
 });
 
-// GET /api/trending — real charts from all genres
+// GET /api/trending — real Deezer global chart + genre charts
 app.get("/api/trending", async (req, res) => {
   const cached = songCache["__trending__"];
   if (cached && Date.now() - cached.ts < CACHE_TTL) {
-    return res.json({ songs: cached.songs, byGenre: cached.byGenre, fromCache: true });
+    return res.json({ songs: cached.songs, byGenre: cached.byGenre, top: cached.top||[], fromCache: true });
   }
   try {
-    const [pop, reggaeton, latina, hiphop, rock, electronica] = await Promise.all([
-      getSongsFromPlaylist("pop", 10),
-      getSongsFromPlaylist("reggaeton", 10),
-      getSongsFromPlaylist("latina", 10),
-      getSongsFromPlaylist("hip-hop", 10),
-      getSongsFromPlaylist("rock", 10),
-      getSongsFromPlaylist("electronica", 10),
-    ]);
-    const byGenre = { pop, reggaeton, latina, "hip-hop": hiphop, rock, electronica };
-    // Interleave genres so top 10 is diverse
-    const songs = [];
-    const maxLen = Math.max(...Object.values(byGenre).map(a => a.length));
-    for (let i = 0; i < maxLen; i++) {
-      for (const g of Object.values(byGenre)) { if (g[i]) songs.push(g[i]); }
+    // Real Deezer global top chart
+    const globalRes = await fetch("https://api.deezer.com/chart/0/tracks?limit=50", {
+      headers: { "User-Agent": USER_AGENT }
+    });
+    let top = [];
+    if (globalRes.ok) {
+      const gData = await globalRes.json();
+      top = (gData.data || []).map((t, i) => ({
+        id: `dz-top-${t.id}`,
+        musicaId: null,
+        title: t.title,
+        artistName: t.artist?.name || "",
+        albumCover: t.album?.cover_xl || t.album?.cover_big || t.album?.cover_medium || null,
+        albumTitle: t.album?.title || "",
+        audioUrl: null,
+        genre: "pop",
+        duration: t.duration || 210,
+        rank: t.rank || i,
+        deezerId: t.id
+      }));
     }
-    songCache["__trending__"] = { songs, byGenre, ts: Date.now() };
-    res.json({ songs, byGenre, fromCache: false });
+    // Real Deezer genre charts (parallel)
+    const GENRE_IDS = { pop: 132, reggaeton: 144, latina: 197, "hip-hop": 116, rock: 152, electronica: 106 };
+    const genreEntries = await Promise.all(
+      Object.entries(GENRE_IDS).map(async ([genre, gid]) => {
+        try {
+          const r = await fetch(`https://api.deezer.com/chart/${gid}/tracks?limit=15`, { headers: { "User-Agent": USER_AGENT } });
+          if (!r.ok) return [genre, []];
+          const d = await r.json();
+          const songs = (d.data || []).map((t, i) => ({
+            id: `dz-chart-${genre}-${t.id}`,
+            musicaId: null,
+            title: t.title,
+            artistName: t.artist?.name || "",
+            albumCover: t.album?.cover_xl || t.album?.cover_big || t.album?.cover_medium || null,
+            albumTitle: t.album?.title || "",
+            audioUrl: null,
+            genre,
+            duration: t.duration || 210,
+            rank: t.rank || i
+          }));
+          return [genre, songs];
+        } catch { return [genre, []]; }
+      })
+    );
+    const byGenre = Object.fromEntries(genreEntries);
+    // songs = global top (if available), else interleave genre charts
+    const songs = top.length ? top : (() => {
+      const arr = [];
+      const maxLen = Math.max(...Object.values(byGenre).map(a => a.length));
+      for (let i = 0; i < maxLen; i++) {
+        for (const g of Object.values(byGenre)) { if (g[i]) arr.push(g[i]); }
+      }
+      return arr;
+    })();
+    songCache["__trending__"] = { songs, byGenre, top, ts: Date.now() };
+    res.json({ songs, byGenre, top, fromCache: false });
   } catch (err) {
-    res.status(500).json({ error: err.message, songs: [], byGenre: {} });
+    res.status(500).json({ error: err.message, songs: [], byGenre: {}, top: [] });
   }
 });
 
@@ -3782,8 +3822,9 @@ function renderHome(songs, gridSongs){
         <div class="sec-title">Volver a escuchar</div>
         <div class="pt-refresh-badge" id="ptRefreshBadge" style="font-size:.7rem;color:rgba(255,255,255,.35);display:none">↻ Actualiza en <span id="ptCountdown">10:00</span></div>
       </div>
-      <div class="hscroll">\${grid.slice(0,10).map((s,i)=>\`
-        <div class="hcard" data-index="\${top.length+i}">
+      \${recentlyPlayed.length>0?\`
+      <div class="hscroll" id="volverScroll">\${recentlyPlayed.slice(0,15).map((s,i)=>\`
+        <div class="hcard" data-volver-index="\${i}">
           <div class="hcard-img">
             \${s.albumCover?\`<img src="\${esc(s.albumCover)}" loading="lazy" onerror="this.style.display='none'">\`:\`<div class="hcard-img-ph">🎵</div>\`}
           </div>
@@ -3791,6 +3832,17 @@ function renderHome(songs, gridSongs){
           <div class="hcard-sub">\${esc(s.artistName)}</div>
         </div>
       \`).join("")}</div>
+      \`:\`
+      <div class="hscroll" id="volverScroll">\${grid.slice(0,10).map((s,i)=>\`
+        <div class="hcard" data-volver-grid="\${i}">
+          <div class="hcard-img">
+            \${s.albumCover?\`<img src="\${esc(s.albumCover)}" loading="lazy" onerror="this.style.display='none'">\`:\`<div class="hcard-img-ph">🎵</div>\`}
+          </div>
+          <div class="hcard-title">\${esc(s.title)}</div>
+          <div class="hcard-sub">\${esc(s.artistName)}</div>
+        </div>
+      \`).join("")}</div>
+      \`}
     </div>
     <div class="sec" style="padding-bottom:24px">
       <div class="sec-hdr">
@@ -3819,6 +3871,15 @@ function renderHome(songs, gridSongs){
       const i=rawIdx-top.length;
       card.addEventListener("click",()=>playSong(grid[i],grid));
     }
+  });
+  // Volver a escuchar — real listen history
+  content.querySelectorAll(".hcard[data-volver-index]").forEach(card=>{
+    const i=parseInt(card.dataset.volverIndex);
+    card.addEventListener("click",()=>playSong(recentlyPlayed[i],recentlyPlayed));
+  });
+  content.querySelectorAll(".hcard[data-volver-grid]").forEach(card=>{
+    const i=parseInt(card.dataset.volverGrid);
+    card.addEventListener("click",()=>playSong(grid[i],grid));
   });
   const refreshAlbumsBtn=content.querySelector("#refreshAlbumsBtn");
   if(refreshAlbumsBtn)refreshAlbumsBtn.addEventListener("click",()=>{
@@ -4137,13 +4198,14 @@ async function renderTrending(){
   try{
     const res=await fetch("/api/trending");
     const data=await res.json();
-    renderTrendingPage(data.songs||[],data.byGenre||{});
+    renderTrendingPage(data.songs||[],data.byGenre||{},data.top||[]);
   }catch(e){renderEmpty("Error al cargar trending: "+e.message);}
 }
 
-function renderTrendingPage(songs,byGenre){
+function renderTrendingPage(songs,byGenre,topChart){
   const content=document.getElementById("mainContent");
-  const top10=songs.slice(0,10);
+  // Prefer real Deezer global chart for top 10, fall back to interleaved songs
+  const top10=(topChart&&topChart.length?topChart:songs).slice(0,10);
   const GENRE_META={
     pop:{label:"Pop",icon:"🎵",color:"#ec4899"},
     reggaeton:{label:"Reggaeton",icon:"🎤",color:"#f59e0b"},
@@ -4153,8 +4215,9 @@ function renderTrendingPage(songs,byGenre){
     electronica:{label:"Electrónica",icon:"⚡",color:"#22d3ee"},
   };
 
-  // Unique artists (up to 14) for the artists row
-  const artistNames=[...new Set(songs.map(s=>s.artistName).filter(Boolean))].slice(0,14);
+  // Unique artists from real top chart first, then interleaved songs (up to 14)
+  const allArtistSources=[...(topChart||[]),...songs];
+  const artistNames=[...new Set(allArtistSources.map(s=>s.artistName).filter(Boolean))].slice(0,14);
   // Gradient palette for avatar placeholders
   const GRADIENTS=["linear-gradient(135deg,#a855f7,#6366f1)","linear-gradient(135deg,#f59e0b,#ef4444)","linear-gradient(135deg,#22d3ee,#059669)","linear-gradient(135deg,#ec4899,#a855f7)","linear-gradient(135deg,#818cf8,#3b82f6)","linear-gradient(135deg,#dc2626,#ea580c)"];
 
