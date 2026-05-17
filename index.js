@@ -2454,14 +2454,6 @@ const HTML = `<!DOCTYPE html>
 <!-- TOP BAR -->
 <div class="topbar">
   <div class="logo" onclick="setView('home')">
-    <div class="logo-icon">
-      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-        <rect x="2"   y="12" width="3" height="7"  rx="1.5" fill="white" opacity=".55"/>
-        <rect x="6.5" y="7"  width="3" height="12" rx="1.5" fill="white"/>
-        <rect x="11"  y="3"  width="3" height="16" rx="1.5" fill="white"/>
-        <rect x="15.5"y="9"  width="3" height="10" rx="1.5" fill="white" opacity=".75"/>
-      </svg>
-    </div>
     <span class="logo-text">PANCHO MIX</span>
     <span class="logo-badge">PRO</span>
   </div>
