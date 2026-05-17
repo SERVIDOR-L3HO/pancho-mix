@@ -3206,15 +3206,6 @@ function renderHome(songs, gridSongs){
 
   const content=document.getElementById("mainContent");
   content.innerHTML=\`
-    <div class="chips" id="genreChips">
-      <div class="chip active" data-genre="trending">🔥 Trending</div>
-      <div class="chip" data-genre="pop">Pop</div>
-      <div class="chip" data-genre="reggaeton">Reggaeton</div>
-      <div class="chip" data-genre="rock">Rock</div>
-      <div class="chip" data-genre="latina">Latina</div>
-      <div class="chip" data-genre="hip-hop">Hip-Hop</div>
-      <div class="chip" data-genre="electronica">Electrónica</div>
-    </div>
     \${recentHtml}
     <div class="sec" id="paraTiSec">
       <div class="sec-hdr">
