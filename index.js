@@ -3014,7 +3014,7 @@ let ytPlayer=null, ytReady=false, progressInterval=null;
 let ytCandidates=[], ytCandidateIdx=0;
 let currentGenre="trending", currentView="home";
 let searchTimeout=null;
-let playerMode=localStorage.getItem("playerMode")||"video";
+let playerMode=localStorage.getItem("playerMode")||"audio";
 let shuffleOn=false, repeatMode=0; // 0=off, 1=all, 2=one
 let liked=false;
 let fullPlayerOpen=false;
@@ -3342,8 +3342,13 @@ async function playSong(song,newQueue){
     const load=()=>{
       if(ytReady&&ytPlayer){
         ytPlayer.loadVideoById(ytId);
-        // Auto-show video whenever full player is open
-        if(fullPlayerOpen) setTimeout(()=>setPlayerMode(playerMode),600);
+        // If already in video mode and full player is open, keep iframe visible without recalculating position
+        if(fullPlayerOpen && playerMode==="video"){
+          const holder=document.getElementById("yt-holder");
+          if(!holder.classList.contains("video-visible")){
+            setTimeout(()=>setPlayerMode("video"),400);
+          }
+        }
       } else setTimeout(load,300);
     };
     load();
