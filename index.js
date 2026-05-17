@@ -5026,9 +5026,8 @@ function renderFavArtists(){
         if(a.id)params.set("deezerId",a.id);
         params.set("name",a.name);
         fetch("/api/artist-profile?"+params).then(r=>r.json()).then(data=>{
-          if(data&&data.songs&&data.songs.length){
-            renderArtistPage(data.artist||{name:a.name,image:a.image,id:a.id},data.songs);
-          } else {showToast("Sin canciones disponibles");}
+          const tracks=data.tracks||[];
+          renderArtistProfile(data.artist||{name:a.name,image:a.image,id:a.id},tracks);
         }).catch(()=>showToast("Error al cargar artista"));
       }
     });
