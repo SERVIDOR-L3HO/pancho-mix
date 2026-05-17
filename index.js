@@ -365,15 +365,62 @@ app.get("/api/search", async (req, res) => {
 
   try {
     // Try soundfly first for richer metadata
-    let songs = await searchSoundfly(q, 15);
+    let songs = await searchSoundfly(q, 20);
 
     // Fall back to musica.com
     if (songs.length === 0) {
-      songs = await searchMusicaCom(q, 15);
+      songs = await searchMusicaCom(q, 20);
     }
 
-    searchCache[key] = { songs, ts: Date.now() };
-    res.json({ songs, fromCache: false });
+    // ── Detect artist search via Deezer name matching ─────────────────────────
+    let artist = null;
+    const normalize = s => (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const qNorm = normalize(q);
+
+    // Ask Deezer if this query is a known artist
+    const deezerArtist = await fetchArtistInfo(q);
+    if (deezerArtist) {
+      const aNorm = normalize(deezerArtist.name);
+      const isMatch = aNorm === qNorm || aNorm.includes(qNorm) || qNorm.includes(aNorm);
+      if (isMatch) {
+        // Filter songs to only this artist
+        const artistSongs = songs.filter(s => {
+          const sNorm = normalize(s.artistName);
+          return sNorm === aNorm || sNorm.includes(aNorm) || aNorm.includes(sNorm);
+        });
+        if (artistSongs.length >= 1) {
+          artist = deezerArtist;
+          songs = artistSongs;
+        } else {
+          // No songs matched — still show artist card with whatever we have
+          artist = deezerArtist;
+        }
+      }
+    }
+
+    // Fallback: count-based detection if Deezer didn't match
+    if (!artist && songs.length >= 3) {
+      const counts = {};
+      for (const s of songs) {
+        const a = (s.artistName || "").toLowerCase().trim();
+        if (a && a !== "artista desconocido" && a !== "artista") {
+          counts[a] = (counts[a] || 0) + 1;
+        }
+      }
+      const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+      if (top && top[1] >= Math.ceil(songs.length * 0.5)) {
+        const artistSongs = songs.filter(
+          s => (s.artistName || "").toLowerCase().trim() === top[0]
+        );
+        const displayName = artistSongs[0].artistName;
+        const info = await fetchArtistInfo(displayName);
+        artist = info || { name: displayName, image: null, fans: 0 };
+        songs = artistSongs;
+      }
+    }
+
+    searchCache[key] = { songs, artist, ts: Date.now() };
+    res.json({ songs, artist, fromCache: false });
   } catch (err) {
     res.status(500).json({ error: err.message, songs: [] });
   }
@@ -415,6 +462,33 @@ app.get("/api/youtube-search-multi", async (req, res) => {
   const ids = await getYouTubeIdsForSong(artist, title);
   res.json({ youtubeIds: ids });
 });
+
+// ─── Deezer artist info ───────────────────────────────────────────────────────
+const artistInfoCache = {};
+async function fetchArtistInfo(name) {
+  const key = name.toLowerCase().trim();
+  if (artistInfoCache[key] !== undefined) return artistInfoCache[key];
+  try {
+    const q = encodeURIComponent(name);
+    const res = await fetch(`https://api.deezer.com/search/artist?q=${q}&limit=1`, {
+      headers: { "User-Agent": USER_AGENT }
+    });
+    if (!res.ok) throw new Error("Deezer error");
+    const data = await res.json();
+    const a = data?.data?.[0];
+    if (!a) { artistInfoCache[key] = null; return null; }
+    const info = {
+      name: a.name,
+      image: a.picture_xl || a.picture_big || a.picture_medium || null,
+      fans: a.nb_fan || 0
+    };
+    artistInfoCache[key] = info;
+    return info;
+  } catch {
+    artistInfoCache[key] = null;
+    return null;
+  }
+}
 
 // GET /api/deezer-cover?artist=X&title=Y — high-res cover from Deezer
 const deezerCoverCache = {};
@@ -939,6 +1013,47 @@ const HTML = `<!DOCTYPE html>
     .search-empty-state{text-align:center;padding:70px 20px;}
     .search-empty-icon{font-size:3.2rem;margin-bottom:14px;opacity:.45;}
     .search-empty-text{color:var(--muted);font-size:.95rem;line-height:1.6;}
+    .artist-card{
+      display:flex;flex-direction:column;align-items:center;
+      background:rgba(255,255,255,.06);
+      backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);
+      border:1px solid rgba(255,255,255,.1);
+      border-radius:24px;padding:28px 20px 22px;margin-bottom:24px;
+      text-align:center;
+    }
+    .artist-avatar{
+      width:96px;height:96px;border-radius:50%;object-fit:cover;
+      flex-shrink:0;margin-bottom:14px;
+      box-shadow:0 6px 32px rgba(0,0,0,.55);
+      border:3px solid rgba(255,255,255,.12);
+    }
+    .artist-avatar-ph{
+      width:96px;height:96px;border-radius:50%;flex-shrink:0;margin-bottom:14px;
+      background:linear-gradient(135deg,rgba(168,85,247,.55),rgba(99,102,241,.55));
+      display:flex;align-items:center;justify-content:center;
+      font-size:2.4rem;font-weight:700;color:#fff;
+      box-shadow:0 6px 32px rgba(0,0,0,.45);
+      border:3px solid rgba(255,255,255,.12);
+    }
+    .artist-name{font-size:1.38rem;font-weight:800;color:#fff;margin-bottom:5px;letter-spacing:-.01em;}
+    .artist-fans{font-size:.78rem;color:var(--muted);margin-bottom:18px;font-weight:500;}
+    .artist-btns{display:flex;gap:10px;width:100%;max-width:320px;}
+    .artist-btn-shuffle{
+      display:flex;align-items:center;justify-content:center;gap:7px;
+      background:#fff;color:#000;border:none;border-radius:50px;
+      padding:11px 0;font-size:.86rem;font-weight:700;cursor:pointer;flex:1;
+      transition:background .15s,transform .12s;box-shadow:0 2px 14px rgba(0,0,0,.35);
+    }
+    .artist-btn-shuffle:hover{background:#e8e8e8;transform:scale(1.03);}
+    .artist-btn-radio{
+      display:flex;align-items:center;justify-content:center;gap:7px;
+      background:rgba(255,255,255,.12);
+      backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+      border:1px solid rgba(255,255,255,.18);border-radius:50px;
+      padding:11px 0;font-size:.86rem;font-weight:700;color:rgba(255,255,255,.9);
+      cursor:pointer;flex:1;transition:background .15s;
+    }
+    .artist-btn-radio:hover{background:rgba(255,255,255,.2);}
 
     /* ── DESKTOP OVERRIDES ── */
     @media(min-width:768px){
@@ -2661,7 +2776,14 @@ function renderSearch(){
   inp.focus();
 }
 
-function renderResults(songs, query){
+function fmtFans(n){
+  if(!n)return"";
+  if(n>=1000000)return(n/1000000).toFixed(1).replace(/\.0$/,"")+" M oyentes mensuales";
+  if(n>=1000)return(n/1000).toFixed(0)+" K oyentes mensuales";
+  return n.toLocaleString()+" oyentes mensuales";
+}
+
+function renderResults(songs, query, artist){
   const area=document.getElementById("searchResults");
   if(!songs||!songs.length){
     area.innerHTML=\`<div class="search-empty-state">
@@ -2670,6 +2792,65 @@ function renderResults(songs, query){
     </div>\`;
     return;
   }
+
+  // ── Artist view ──────────────────────────────────────────────────────────────
+  if(artist){
+    const initials=(artist.name||"?").split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
+    const avatarHtml=artist.image
+      ?\`<img class="artist-avatar" src="\${esc(artist.image)}" loading="lazy" onerror="this.outerHTML='<div class=artist-avatar-ph>\${esc(initials)}</div>'">\`
+      :\`<div class="artist-avatar-ph">\${esc(initials)}</div>\`;
+    const fansHtml=artist.fans?\`<div class="artist-fans">\${esc(fmtFans(artist.fans))}</div>\`:"";
+    const songRows=songs.map((s,i)=>{
+      const cover=s.albumCover?\`<img class="search-result-cover" src="\${esc(s.albumCover)}" loading="lazy" onerror="this.outerHTML='<div class=search-result-cover-ph>🎵</div>'">\`:\`<div class="search-result-cover-ph">🎵</div>\`;
+      const dur=s.duration?Math.floor(s.duration/60)+":"+(s.duration%60<10?"0":"")+s.duration%60:"";
+      const active=currentSong&&currentSong.id===s.id?"active-row":"";
+      return \`<div class="search-result-row \${active}" data-index="\${i}">
+        \${cover}
+        <div class="search-result-info">
+          <div class="search-result-title">\${esc(s.title)}</div>
+          <div class="search-result-meta">Canción · \${esc(s.artistName)}\${dur?" · "+dur:""}</div>
+        </div>
+        <div class="search-result-actions">
+          <button class="search-result-dots" title="Más opciones">⋮</button>
+        </div>
+      </div>\`;
+    }).join("");
+    area.innerHTML=\`
+      <div class="artist-card">
+        \${avatarHtml}
+        <div class="artist-name">\${esc(artist.name)}</div>
+        \${fansHtml}
+        <div class="artist-btns">
+          <button class="artist-btn-shuffle" id="artistBtnShuffle">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+            Aleatorio
+          </button>
+          <button class="artist-btn-radio" id="artistBtnRadio">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49"/><path d="M7.76 7.76a6 6 0 0 0 0 8.49"/><path d="M20.07 4.93a10 10 0 0 1 0 14.14"/><path d="M3.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+            Radio
+          </button>
+        </div>
+      </div>
+      <div class="sr-list-label">Canciones</div>
+      \${songRows}
+      <div style="padding-bottom:36px"></div>
+    \`;
+    area.querySelector("#artistBtnShuffle").addEventListener("click",()=>{
+      const shuffled=[...songs].sort(()=>Math.random()-.5);
+      playSong(shuffled[0],shuffled);
+    });
+    area.querySelector("#artistBtnRadio").addEventListener("click",()=>playSong(songs[0],songs));
+    area.querySelectorAll(".search-result-row").forEach(row=>{
+      const i=parseInt(row.dataset.index);
+      row.addEventListener("click",()=>playSong(songs[i],songs));
+      row.querySelector(".search-result-dots").addEventListener("click",e=>{e.stopPropagation();openCtxMenu(e,songs[i]);});
+    });
+    highlightRows();
+    enrichListCovers(songs);
+    return;
+  }
+
+  // ── Normal search results ────────────────────────────────────────────────────
   const top=songs[0];
   const rest=songs.slice(1);
   const heroImg=top.albumCover
@@ -2781,7 +2962,7 @@ async function doSearch(q){
     const res=await fetch("/api/search?q="+encodeURIComponent(q));
     const data=await res.json();
     saveRecentSearch(q);
-    renderResults(data.songs||[],q);
+    renderResults(data.songs||[],q,data.artist||null);
   }catch(e){if(area)area.innerHTML=\`<div class="search-empty-state"><div class="search-empty-icon">⚠️</div><div class="search-empty-text">Error al buscar</div></div>\`;}
 }
 
