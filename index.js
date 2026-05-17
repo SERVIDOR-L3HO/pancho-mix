@@ -2578,23 +2578,22 @@ function renderResults(songs, query){
     <div class="search-results-header">
       <div class="search-results-count">\${songs.length} resultado\${songs.length!==1?"s":""} para "<strong>\${esc(query)}</strong>"</div>
     </div>
-    \${songs.map((s,i)=>\`
-      <div class="search-result-row \${currentSong&&currentSong.id===s.id?"active-row":""}" data-song-id="\${s.id}" data-index="\${i}">
-        \${s.albumCover
-          ?\`<img class="search-result-cover" src="\${esc(s.albumCover)}" loading="lazy" onerror="this.outerHTML='<div class=search-result-cover-ph>🎵</div>'">`
-          :\`<div class="search-result-cover-ph">🎵</div>\`}
+    \${songs.map((s,i)=>{
+      const cover=s.albumCover?\`<img class="search-result-cover" src="\${esc(s.albumCover)}" loading="lazy" onerror="this.outerHTML='<div class=search-result-cover-ph>🎵</div>'">\`:\`<div class="search-result-cover-ph">🎵</div>\`;
+      const dur=s.duration?Math.floor(s.duration/60)+":"+(s.duration%60<10?"0":"")+s.duration%60:"";
+      const active=currentSong&&currentSong.id===s.id?"active-row":"";
+      return \`<div class="search-result-row \${active}" data-song-id="\${s.id}" data-index="\${i}">
+        \${cover}
         <div class="search-result-info">
           <div class="search-result-title">\${esc(s.title)}</div>
-          <div class="search-result-meta">\${esc(s.artistName)}\${s.duration?\` · \${Math.floor(s.duration/60)}:\${String(s.duration%60).padStart(2,"0")}`:""}</div>
+          <div class="search-result-meta">\${esc(s.artistName)}\${dur?" · "+dur:""}</div>
         </div>
         <div class="search-result-actions">
-          <button class="search-result-play" title="Reproducir">
-            <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          </button>
+          <button class="search-result-play" title="Reproducir"><svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg></button>
           <button class="search-result-dots" title="Más opciones">⋯</button>
         </div>
-      </div>
-    \`).join("")}
+      </div>\`;
+    }).join("")}
     <div style="padding-bottom:24px"></div>
   \`;
   area.querySelectorAll(".search-result-row").forEach(row=>{
