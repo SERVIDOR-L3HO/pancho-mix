@@ -416,6 +416,36 @@ app.get("/api/youtube-search-multi", async (req, res) => {
   res.json({ youtubeIds: ids });
 });
 
+// GET /api/deezer-cover?artist=X&title=Y — high-res cover from Deezer
+const deezerCoverCache = {};
+app.get("/api/deezer-cover", async (req, res) => {
+  const artist = (req.query.artist || "").trim();
+  const title = (req.query.title || "").trim();
+  if (!artist || !title) return res.status(400).json({ error: "artist and title required" });
+
+  const key = `${artist}|${title}`.toLowerCase();
+  if (deezerCoverCache[key]) return res.json(deezerCoverCache[key]);
+
+  try {
+    const q = encodeURIComponent(`${artist} ${title}`);
+    const apiRes = await fetch(`https://api.deezer.com/search?q=${q}&limit=1`, {
+      headers: { "User-Agent": USER_AGENT }
+    });
+    if (!apiRes.ok) throw new Error("Deezer error");
+    const data = await apiRes.json();
+    const track = data?.data?.[0];
+    if (!track) { deezerCoverCache[key] = { cover: null }; return res.json({ cover: null }); }
+    const result = {
+      cover: track.album?.cover_xl || track.album?.cover_big || track.album?.cover_medium || null,
+      cover_medium: track.album?.cover_medium || null,
+    };
+    deezerCoverCache[key] = result;
+    res.json(result);
+  } catch {
+    res.json({ cover: null });
+  }
+});
+
 // ─── HTML Frontend ────────────────────────────────────────────────────────────
 
 const HTML = `<!DOCTYPE html>
@@ -1830,6 +1860,7 @@ async function playSong(song,newQueue){
   document.getElementById("miniPlayer").style.display="block";
   addToRecentlyPlayed(song);
   updateProfileStats();
+  enrichCoverFromDeezer(song);
 
   ytCandidates=[]; ytCandidateIdx=0;
   let ytId=getYtId(song.audioUrl);
@@ -1911,6 +1942,38 @@ function updateMiniPlayer(){
     img.src=currentSong.albumCover;
   }
   if(fullPlayerOpen)updateFullPlayer();
+}
+
+function applyCoverToUI(song, coverUrl){
+  // Update the cover image in full player
+  const artEl=document.getElementById("fpArt");
+  const artPh=document.getElementById("fpArtPh");
+  let img=artEl.querySelector("img");
+  if(!img){img=document.createElement("img");img.style="width:100%;height:100%;object-fit:cover;display:block;";artPh.style.display="none";artEl.appendChild(img);}
+  img.src=coverUrl;
+  document.getElementById("fpBgArt").style.backgroundImage=\`url(\${coverUrl})\`;
+  // Update mini player cover
+  const mini=document.getElementById("miniCover");
+  if(mini)mini.outerHTML=\`<img id="miniCover" class="mini-cover" src="\${coverUrl}" alt="">\`;
+  // Update any visible row covers for this song
+  document.querySelectorAll(\`[data-song-id="\${song.id}"] .row-cover\`).forEach(el=>el.src=coverUrl);
+}
+
+async function enrichCoverFromDeezer(song){
+  if(!song||!song.artistName||!song.title)return;
+  try{
+    const p=new URLSearchParams({artist:song.artistName,title:song.title});
+    const r=await fetch("/api/deezer-cover?"+p);
+    if(!r.ok)return;
+    const d=await r.json();
+    if(d.cover && d.cover!==song.albumCover){
+      song.albumCover=d.cover;
+      // Only apply if this song is still the one playing
+      if(currentSong&&currentSong.id===song.id){
+        applyCoverToUI(song, d.cover);
+      }
+    }
+  }catch{}
 }
 
 // ─── Context Menu ──────────────────────────────────────────────────────────────
