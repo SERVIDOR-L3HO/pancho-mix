@@ -1226,6 +1226,110 @@ const HTML = `<!DOCTYPE html>
     .ap-track-dots:hover{color:#fff;background:rgba(255,255,255,.07);}
     .ap-loading{text-align:center;padding:50px 20px;color:var(--muted);font-size:.9rem;}
 
+    /* ── CATEGORY PAGE ── */
+    .cat-page{}
+    .cat-hero{position:relative;width:100%;height:190px;overflow:hidden;flex-shrink:0;}
+    .cat-hero-bg{position:absolute;inset:0;}
+    .cat-hero-gradient{
+      position:absolute;inset:0;
+      background:linear-gradient(to bottom,rgba(0,0,0,.12) 0%,rgba(8,8,15,.88) 100%);
+    }
+    .cat-hero-back{
+      position:absolute;top:16px;left:16px;z-index:10;
+      width:36px;height:36px;border-radius:50%;
+      background:rgba(0,0,0,.4);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+      border:none;display:flex;align-items:center;justify-content:center;
+      cursor:pointer;color:#fff;transition:background .15s;
+    }
+    .cat-hero-back:hover{background:rgba(0,0,0,.65);}
+    .cat-hero-title{
+      position:absolute;bottom:20px;left:20px;
+      font-size:2.2rem;font-weight:900;color:#fff;
+      letter-spacing:-.02em;text-shadow:0 2px 16px rgba(0,0,0,.5);
+    }
+    .cat-hero-icon{
+      position:absolute;right:-8px;bottom:-14px;
+      font-size:8rem;opacity:.18;line-height:1;pointer-events:none;
+    }
+    .cat-section{padding:20px 18px 4px;}
+    .cat-section-title{font-size:1.1rem;font-weight:800;color:#fff;margin-bottom:14px;letter-spacing:-.01em;}
+    .playlist-scroll{display:flex;gap:14px;overflow-x:auto;padding:0 18px 16px;scrollbar-width:none;}
+    .playlist-scroll::-webkit-scrollbar{display:none;}
+    .pl-card{flex-shrink:0;width:146px;cursor:pointer;transition:transform .18s;}
+    .pl-card:hover{transform:scale(1.04);}
+    .pl-card:active{transform:scale(.96);}
+    .pl-card-cover{
+      width:146px;height:146px;border-radius:14px;position:relative;overflow:hidden;
+      box-shadow:0 6px 20px rgba(0,0,0,.45);margin-bottom:10px;flex-shrink:0;
+    }
+    .pl-card-cover-grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;width:100%;height:100%;}
+    .pl-card-cover-grid img{width:100%;height:100%;object-fit:cover;}
+    .pl-card-cover-single{
+      position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:4.5rem;
+    }
+    .pl-card-name{font-size:.84rem;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .pl-card-desc{font-size:.72rem;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+    /* ── PLAYLIST PAGE ── */
+    .playlist-page{position:relative;min-height:100%;}
+    .playlist-hero{position:relative;width:100%;height:255px;overflow:hidden;flex-shrink:0;}
+    .pl-hero-cover-grid{
+      position:absolute;inset:0;
+      display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;
+    }
+    .pl-hero-cover-grid img{width:100%;height:100%;object-fit:cover;}
+    .pl-hero-cover-single{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:6rem;}
+    .pl-hero-gradient{
+      position:absolute;inset:0;
+      background:linear-gradient(to bottom,rgba(0,0,0,.15) 0%,rgba(8,8,15,0) 35%,rgba(8,8,15,.88) 78%,var(--bg) 100%);
+    }
+    .pl-hero-back{
+      position:absolute;top:16px;left:16px;z-index:10;
+      width:36px;height:36px;border-radius:50%;
+      background:rgba(0,0,0,.45);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+      border:none;display:flex;align-items:center;justify-content:center;
+      cursor:pointer;color:#fff;transition:background .15s;
+    }
+    .pl-hero-back:hover{background:rgba(0,0,0,.65);}
+    .pl-hero-info{position:absolute;bottom:16px;left:18px;right:18px;z-index:5;}
+    .pl-hero-name{font-size:1.7rem;font-weight:900;color:#fff;letter-spacing:-.02em;line-height:1.15;text-shadow:0 2px 14px rgba(0,0,0,.5);}
+    .pl-hero-desc{font-size:.78rem;color:rgba(255,255,255,.65);margin-top:6px;}
+    .pl-actions{display:flex;align-items:center;gap:12px;padding:14px 18px 10px;}
+    .pl-act-btn{
+      background:none;border:none;color:rgba(255,255,255,.45);cursor:pointer;
+      padding:6px;border-radius:50%;transition:color .15s,background .15s;flex-shrink:0;
+    }
+    .pl-act-btn:hover{color:#fff;background:rgba(255,255,255,.08);}
+    .pl-spacer{flex:1;}
+    .pl-shuffle-btn{background:none;border:none;color:rgba(255,255,255,.55);cursor:pointer;padding:6px;transition:color .15s;flex-shrink:0;}
+    .pl-shuffle-btn:hover{color:#fff;}
+    .pl-play-btn{
+      width:54px;height:54px;border-radius:50%;background:#fff;border:none;
+      display:flex;align-items:center;justify-content:center;
+      cursor:pointer;flex-shrink:0;
+      transition:background .15s,transform .12s;box-shadow:0 4px 22px rgba(0,0,0,.4);
+    }
+    .pl-play-btn:hover{background:#e8e8e8;transform:scale(1.06);}
+    .pl-track-row{
+      display:flex;align-items:center;gap:14px;
+      padding:8px 18px;cursor:pointer;transition:background .15s;border-radius:10px;
+    }
+    .pl-track-row:hover{background:rgba(255,255,255,.07);}
+    .pl-track-num{width:24px;text-align:right;font-size:.88rem;color:var(--muted);font-weight:500;flex-shrink:0;}
+    .pl-track-num.playing{color:var(--p);}
+    .pl-track-cover{width:50px;height:50px;border-radius:8px;object-fit:cover;flex-shrink:0;box-shadow:0 2px 10px rgba(0,0,0,.3);}
+    .pl-track-cover-ph{
+      width:50px;height:50px;border-radius:8px;flex-shrink:0;
+      background:linear-gradient(135deg,rgba(168,85,247,.3),rgba(99,102,241,.3));
+      display:flex;align-items:center;justify-content:center;font-size:1.3rem;
+    }
+    .pl-track-info{flex:1;min-width:0;}
+    .pl-track-title{font-size:.92rem;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .pl-track-title.playing{color:var(--p);}
+    .pl-track-meta{font-size:.74rem;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .pl-track-dots{background:none;border:none;color:rgba(255,255,255,.3);font-size:1.2rem;cursor:pointer;padding:6px;flex-shrink:0;border-radius:6px;transition:color .15s;}
+    .pl-track-dots:hover{color:#fff;background:rgba(255,255,255,.07);}
+
     /* ── DESKTOP OVERRIDES ── */
     @media(min-width:768px){
       .bottom-nav{display:none;}
@@ -2855,18 +2959,18 @@ function removeRecentSearch(q){const r=getRecentSearches().filter(x=>x!==q);loca
 function clearAllRecents(){localStorage.removeItem(RECENT_SEARCHES_KEY);renderSearchPlaceholder();}
 
 const GENRE_CARDS=[
-  {label:"Pop",color:"linear-gradient(135deg,#E91E8C,#9C27B0)",icon:"🎤"},
-  {label:"Reggaeton",color:"linear-gradient(135deg,#FF6D00,#E91E63)",icon:"🔥"},
-  {label:"Rock",color:"linear-gradient(135deg,#546E7A,#212121)",icon:"🎸"},
-  {label:"Latina",color:"linear-gradient(135deg,#00897B,#2E7D32)",icon:"💃"},
-  {label:"Hip-Hop",color:"linear-gradient(135deg,#F57F17,#BF360C)",icon:"🎧"},
-  {label:"Electrónica",color:"linear-gradient(135deg,#1565C0,#6A1B9A)",icon:"⚡"},
-  {label:"Baladas",color:"linear-gradient(135deg,#AD1457,#4527A0)",icon:"💜"},
-  {label:"R&B",color:"linear-gradient(135deg,#6A1B9A,#1A237E)",icon:"🎶"},
-  {label:"Trap",color:"linear-gradient(135deg,#263238,#546E7A)",icon:"🔱"},
-  {label:"Salsa",color:"linear-gradient(135deg,#B71C1C,#E65100)",icon:"🥁"},
-  {label:"Indie",color:"linear-gradient(135deg,#33691E,#1B5E20)",icon:"🌿"},
-  {label:"Metal",color:"linear-gradient(135deg,#37474F,#880E4F)",icon:"🤘"},
+  {id:"pop",label:"Pop",color:"linear-gradient(135deg,#E91E8C,#9C27B0)",icon:"🎤",genre:"pop"},
+  {id:"reggaeton",label:"Reggaeton",color:"linear-gradient(135deg,#FF6D00,#E91E63)",icon:"🔥",genre:"reggaeton"},
+  {id:"rock",label:"Rock",color:"linear-gradient(135deg,#546E7A,#212121)",icon:"🎸",genre:"rock"},
+  {id:"latina",label:"Latina",color:"linear-gradient(135deg,#00897B,#2E7D32)",icon:"💃",genre:"latina"},
+  {id:"hiphop",label:"Hip-Hop",color:"linear-gradient(135deg,#F57F17,#BF360C)",icon:"🎧",genre:"hip-hop"},
+  {id:"electronica",label:"Electrónica",color:"linear-gradient(135deg,#1565C0,#6A1B9A)",icon:"⚡",genre:"electronica"},
+  {id:"baladas",label:"Baladas",color:"linear-gradient(135deg,#AD1457,#4527A0)",icon:"💜",genre:"pop"},
+  {id:"rnb",label:"R&B",color:"linear-gradient(135deg,#6A1B9A,#1A237E)",icon:"🎶",genre:"hip-hop"},
+  {id:"trap",label:"Trap",color:"linear-gradient(135deg,#263238,#546E7A)",icon:"🔱",genre:"hip-hop"},
+  {id:"salsa",label:"Salsa",color:"linear-gradient(135deg,#B71C1C,#E65100)",icon:"🥁",genre:"latina"},
+  {id:"indie",label:"Indie",color:"linear-gradient(135deg,#33691E,#1B5E20)",icon:"🌿",genre:"rock"},
+  {id:"metal",label:"Metal",color:"linear-gradient(135deg,#37474F,#880E4F)",icon:"🤘",genre:"rock"},
 ];
 
 function renderSearchPlaceholder(){
@@ -2893,8 +2997,8 @@ function renderSearchPlaceholder(){
     \${recHtml}
     <div class="search-section-title">Explorar todo</div>
     <div class="genre-grid">
-      \${GENRE_CARDS.map(g=>\`
-        <div class="genre-card" onclick="fillSearch('\${esc(g.label)}')" style="--gc:\${g.color}">
+      \${GENRE_CARDS.map((g,i)=>\`
+        <div class="genre-card" onclick="openCategoryPage(GENRE_CARDS[\${i}])" style="--gc:\${g.color}">
           <div class="genre-card-bg"></div>
           <div class="genre-card-shine"></div>
           <span class="genre-card-icon">\${g.icon}</span>
@@ -3144,6 +3248,210 @@ async function doSearch(q){
 
 function syncChips(genre){
   document.querySelectorAll(".chip").forEach(c=>c.classList.toggle("active",c.dataset.genre===genre));
+}
+
+// ─── Category & Playlist Pages ─────────────────────────────────────────────────
+function getCategoryPlaylists(cat){
+  const rows=[
+    [
+      {suffix:"top",name:\`Top \${cat.label}\`,desc:"Los más escuchados ahora mismo"},
+      {suffix:"hits",name:\`Éxitos \${cat.label}\`,desc:"Clásicos que no fallan"},
+      {suffix:"new",name:\`Nuevos · \${cat.label}\`,desc:"Recién llegados esta semana"},
+      {suffix:"vibes",name:\`\${cat.label} Vibes\`,desc:"El ambiente perfecto"},
+    ],
+    [
+      {suffix:"mix",name:\`\${cat.label} Mix\`,desc:"Una mezcla para todos"},
+      {suffix:"night",name:\`\${cat.label} Noche\`,desc:"Para las noches especiales"},
+      {suffix:"chill",name:\`\${cat.label} Chill\`,desc:"Relájate con esto"},
+      {suffix:"fire",name:\`\${cat.label} 🔥\`,desc:"Las que están en boca de todos"},
+    ],
+  ];
+  return rows.map(section=>section.map(p=>({
+    ...p,
+    id:\`\${cat.id}-\${p.suffix}\`,
+    genre:cat.genre,
+    color:cat.color,
+    icon:cat.icon,
+    catId:cat.id,
+    catLabel:cat.label,
+  })));
+}
+
+function openCategoryPage(cat){
+  const content=document.getElementById("mainContent");
+  content.innerHTML=\`<div class="ap-loading"><div class="spinner"></div> Cargando...</div>\`;
+  renderCategoryPage(cat);
+}
+
+function renderCategoryPage(cat){
+  const content=document.getElementById("mainContent");
+  const sections=getCategoryPlaylists(cat);
+  const sectionTitles=["Playlists populares","También te puede gustar"];
+  content.innerHTML=\`
+    <div class="cat-page">
+      <div class="cat-hero">
+        <div class="cat-hero-bg" style="background:\${cat.color}"></div>
+        <div class="cat-hero-gradient"></div>
+        <button class="cat-hero-back" id="catBackBtn">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <span class="cat-hero-icon">\${cat.icon}</span>
+        <div class="cat-hero-title">\${esc(cat.label)}</div>
+      </div>
+      \${sections.map((pls,si)=>\`
+        <div class="cat-section"><div class="cat-section-title">\${sectionTitles[si]}</div></div>
+        <div class="playlist-scroll">
+          \${pls.map((pl,pi)=>\`
+            <div class="pl-card" data-si="\${si}" data-pi="\${pi}">
+              <div class="pl-card-cover" style="background:\${cat.color}">
+                <div class="pl-card-cover-single">\${cat.icon}</div>
+              </div>
+              <div class="pl-card-name">\${esc(pl.name)}</div>
+              <div class="pl-card-desc">\${esc(pl.desc)}</div>
+            </div>
+          \`).join("")}
+        </div>
+      \`).join("")}
+      <div style="padding-bottom:36px"></div>
+    </div>
+  \`;
+  content.querySelector("#catBackBtn").addEventListener("click",()=>setView("search"));
+  content.querySelectorAll(".pl-card").forEach(card=>{
+    const si=parseInt(card.dataset.si),pi=parseInt(card.dataset.pi);
+    card.addEventListener("click",()=>openPlaylistPage(sections[si][pi],cat));
+  });
+  loadCategoryCovers(cat,sections,content);
+}
+
+async function loadCategoryCovers(cat,sections,container){
+  try{
+    const res=await fetch(\`/api/songs?genre=\${encodeURIComponent(cat.genre)}&limit=20\`);
+    const data=await res.json();
+    const songs=data.songs||[];
+    if(!songs.length)return;
+    sections.forEach((pls,si)=>{
+      pls.forEach((pl,pi)=>{
+        const card=container.querySelector(\`[data-si="\${si}"][data-pi="\${pi}"]\`);
+        if(!card)return;
+        const coverEl=card.querySelector(".pl-card-cover");
+        if(!coverEl)return;
+        const offset=(si*4+pi*4)%songs.length;
+        const picks=Array.from({length:4},(_,k)=>songs[(offset+k)%songs.length]);
+        const withCovers=picks.filter(s=>s.albumCover);
+        if(withCovers.length>=4){
+          coverEl.innerHTML=\`<div class="pl-card-cover-grid">
+            \${withCovers.slice(0,4).map(s=>\`<img src="\${esc(s.albumCover)}" loading="lazy" onerror="this.style.background='rgba(168,85,247,.3)'">\`).join("")}
+          </div>\`;
+        } else if(withCovers.length>=1){
+          coverEl.innerHTML=\`<img src="\${esc(withCovers[0].albumCover)}" style="width:100%;height:100%;object-fit:cover" loading="lazy">\`;
+        }
+      });
+    });
+  }catch{}
+}
+
+function seedShuffle(arr,seed){
+  const a=[...arr];let s=seed||1;
+  for(let i=a.length-1;i>0;i--){
+    s=(s*1664525+1013904223)&0xffffffff;
+    const j=Math.abs(s)%(i+1);
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+async function openPlaylistPage(playlist,cat){
+  const content=document.getElementById("mainContent");
+  content.innerHTML=\`<div class="ap-loading"><div class="spinner"></div> Cargando playlist...</div>\`;
+  try{
+    const res=await fetch(\`/api/songs?genre=\${encodeURIComponent(playlist.genre)}&limit=25\`);
+    const data=await res.json();
+    const seed=playlist.id.split("").reduce((a,c)=>a+c.charCodeAt(0),0);
+    const songs=seedShuffle(data.songs||[],seed);
+    renderPlaylistPage(playlist,songs,cat);
+  }catch(e){
+    document.getElementById("mainContent").innerHTML=\`<div class="ap-loading">Error al cargar la playlist</div>\`;
+  }
+}
+
+function renderPlaylistPage(playlist,songs,cat){
+  const content=document.getElementById("mainContent");
+  const totalSecs=songs.reduce((t,s)=>t+(s.duration||210),0);
+  const totalMins=Math.round(totalSecs/60);
+  const totalStr=totalMins>=60?\`\${Math.floor(totalMins/60)} h \${totalMins%60} min\`:\`\${totalMins} min\`;
+  const withCovers=songs.filter(s=>s.albumCover).slice(0,4);
+  let coverHtml;
+  if(withCovers.length>=4){
+    coverHtml=\`<div class="pl-hero-cover-grid">
+      \${withCovers.map(s=>\`<img src="\${esc(s.albumCover)}" loading="lazy" onerror="this.style.background='rgba(168,85,247,.3)'">\`).join("")}
+    </div>\`;
+  } else if(withCovers.length>=1){
+    coverHtml=\`<img src="\${esc(withCovers[0].albumCover)}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">\`;
+  } else {
+    const bg=cat?cat.color:"linear-gradient(135deg,#a855f7,#6366f1)";
+    coverHtml=\`<div class="pl-hero-cover-single" style="background:\${bg}">\${playlist.icon||"🎵"}</div>\`;
+  }
+  const trackRows=songs.map((s,i)=>{
+    const cover=s.albumCover
+      ?\`<img class="pl-track-cover" src="\${esc(s.albumCover)}" loading="lazy" onerror="this.outerHTML='<div class=pl-track-cover-ph>🎵</div>'">\`
+      :\`<div class="pl-track-cover-ph">🎵</div>\`;
+    const dur=s.duration?Math.floor(s.duration/60)+":"+(s.duration%60<10?"0":"")+s.duration%60:"";
+    const playing=currentSong&&currentSong.id===s.id;
+    return \`<div class="pl-track-row" data-index="\${i}">
+      <div class="pl-track-num\${playing?" playing":""}"><span>\${playing?"▶":i+1}</span></div>
+      \${cover}
+      <div class="pl-track-info">
+        <div class="pl-track-title\${playing?" playing":""}">\${esc(s.title)}</div>
+        <div class="pl-track-meta">\${esc(s.artistName)}\${dur?" · "+dur:""}</div>
+      </div>
+      <button class="pl-track-dots">⋮</button>
+    </div>\`;
+  }).join("");
+  content.innerHTML=\`
+    <div class="playlist-page">
+      <div class="playlist-hero" \${cat?\`style="background:\${cat.color}"\`:""}>
+        \${coverHtml}
+        <div class="pl-hero-gradient"></div>
+        <button class="pl-hero-back" id="plBackBtn">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="pl-hero-info">
+          <div class="pl-hero-name">\${esc(playlist.name)}</div>
+          <div class="pl-hero-desc">\${esc(playlist.desc||"")}</div>
+        </div>
+      </div>
+      <div class="pl-actions">
+        <button class="pl-act-btn" title="Agregar">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        </button>
+        <button class="pl-act-btn" title="Más">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+        </button>
+        <span style="font-size:.76rem;color:var(--muted);flex-shrink:0">\${songs.length} canciones · \${totalStr}</span>
+        <div class="pl-spacer"></div>
+        <button class="pl-shuffle-btn" id="plShuffleBtn">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+        </button>
+        <button class="pl-play-btn" id="plPlayBtn">
+          <svg width="24" height="24" fill="#000" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        </button>
+      </div>
+      \${trackRows}
+      <div style="padding-bottom:36px"></div>
+    </div>
+  \`;
+  content.querySelector("#plBackBtn").addEventListener("click",()=>{ if(cat)renderCategoryPage(cat); else setView("search"); });
+  content.querySelector("#plPlayBtn").addEventListener("click",()=>{ if(songs.length)playSong(songs[0],songs); });
+  content.querySelector("#plShuffleBtn").addEventListener("click",()=>{
+    if(!songs.length)return;
+    const sh=[...songs].sort(()=>Math.random()-.5);
+    playSong(sh[0],sh);
+  });
+  content.querySelectorAll(".pl-track-row").forEach(row=>{
+    const i=parseInt(row.dataset.index);
+    row.addEventListener("click",()=>playSong(songs[i],songs));
+    row.querySelector(".pl-track-dots").addEventListener("click",e=>{e.stopPropagation();openCtxMenu(e,songs[i]);});
+  });
 }
 
 // ─── Artist Profile ────────────────────────────────────────────────────────────
