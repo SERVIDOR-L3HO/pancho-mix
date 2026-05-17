@@ -851,55 +851,89 @@ const HTML = `<!DOCTYPE html>
     }
     .search-results-header{
       display:flex;align-items:center;justify-content:space-between;
-      margin-bottom:14px;padding-bottom:10px;
-      border-bottom:1px solid rgba(255,255,255,.06);
+      margin-bottom:14px;
     }
-    .search-results-count{font-size:.82rem;color:var(--muted);font-weight:500;}
+    .search-results-count{font-size:.78rem;color:var(--muted);font-weight:500;letter-spacing:.01em;}
+    .sr-hero{
+      display:flex;align-items:flex-start;gap:16px;
+      background:rgba(255,255,255,.08);
+      backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+      border:1px solid rgba(255,255,255,.13);
+      border-radius:22px;padding:18px;margin-bottom:22px;cursor:pointer;
+      transition:background .18s,box-shadow .18s;
+      box-shadow:0 6px 28px rgba(0,0,0,.32);
+    }
+    .sr-hero:hover{background:rgba(255,255,255,.13);box-shadow:0 10px 40px rgba(0,0,0,.48);}
+    .sr-hero-cover{
+      width:78px;height:78px;border-radius:14px;object-fit:cover;
+      flex-shrink:0;box-shadow:0 4px 20px rgba(0,0,0,.5);
+    }
+    .sr-hero-cover-ph{
+      width:78px;height:78px;border-radius:14px;flex-shrink:0;
+      background:linear-gradient(135deg,rgba(168,85,247,.4),rgba(99,102,241,.4));
+      display:flex;align-items:center;justify-content:center;font-size:2rem;
+    }
+    .sr-hero-info{flex:1;min-width:0;}
+    .sr-hero-tag{
+      font-size:.62rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+      color:rgba(168,85,247,.95);margin-bottom:6px;
+    }
+    .sr-hero-title{
+      font-size:1.12rem;font-weight:700;color:#fff;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px;
+    }
+    .sr-hero-meta{font-size:.8rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .sr-hero-btns{display:flex;gap:8px;margin-top:13px;flex-wrap:wrap;}
+    .sr-hero-play{
+      display:flex;align-items:center;gap:8px;
+      background:#fff;color:#000;border:none;border-radius:50px;
+      padding:10px 22px;font-size:.85rem;font-weight:700;cursor:pointer;
+      transition:background .15s,transform .12s,box-shadow .15s;
+      box-shadow:0 2px 14px rgba(0,0,0,.35);
+    }
+    .sr-hero-play:hover{background:#ececec;transform:scale(1.05);box-shadow:0 4px 20px rgba(0,0,0,.4);}
+    .sr-hero-more{
+      display:flex;align-items:center;gap:6px;
+      background:rgba(255,255,255,.1);
+      backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+      border:1px solid rgba(255,255,255,.16);border-radius:50px;
+      padding:10px 18px;font-size:.85rem;color:rgba(255,255,255,.8);cursor:pointer;
+      transition:background .15s,color .15s;
+    }
+    .sr-hero-more:hover{background:rgba(255,255,255,.18);color:#fff;}
+    .sr-list-label{
+      font-size:.68rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;
+      color:rgba(255,255,255,.28);margin-bottom:6px;padding-left:10px;
+    }
     .search-result-row{
       display:flex;align-items:center;gap:14px;
-      padding:10px 10px;border-radius:14px;cursor:pointer;
+      padding:9px 10px;border-radius:14px;cursor:pointer;
       transition:background .15s;margin-bottom:2px;
     }
     .search-result-row:hover,.search-result-row.active-row{
       background:rgba(255,255,255,.07);
-      backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+      backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
     }
     .search-result-cover{
-      width:56px;height:56px;border-radius:12px;object-fit:cover;
+      width:52px;height:52px;border-radius:10px;object-fit:cover;
       flex-shrink:0;background:rgba(255,255,255,.08);
-      box-shadow:0 2px 12px rgba(0,0,0,.35);
+      box-shadow:0 2px 10px rgba(0,0,0,.3);
     }
     .search-result-cover-ph{
-      width:56px;height:56px;border-radius:12px;flex-shrink:0;
-      background:linear-gradient(135deg,rgba(168,85,247,.3),rgba(99,102,241,.3));
-      display:flex;align-items:center;justify-content:center;font-size:1.4rem;
+      width:52px;height:52px;border-radius:10px;flex-shrink:0;
+      background:linear-gradient(135deg,rgba(168,85,247,.25),rgba(99,102,241,.25));
+      display:flex;align-items:center;justify-content:center;font-size:1.3rem;
     }
     .search-result-info{flex:1;min-width:0;}
-    .search-result-title{
-      font-size:.95rem;font-weight:600;color:#fff;
-      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-    }
-    .search-result-meta{font-size:.78rem;color:var(--muted);margin-top:3px;}
-    .search-result-actions{display:flex;align-items:center;gap:6px;flex-shrink:0;}
-    .search-result-play{
-      width:36px;height:36px;border-radius:50%;
-      background:rgba(168,85,247,.28);
-      backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
-      border:1px solid rgba(168,85,247,.45);cursor:pointer;
-      color:#fff;display:flex;align-items:center;justify-content:center;
-      transition:background .15s,transform .15s,box-shadow .15s;opacity:0;
-    }
-    .search-result-row:hover .search-result-play{opacity:1;}
-    .search-result-play:hover{
-      background:rgba(168,85,247,.65);transform:scale(1.1);
-      box-shadow:0 0 18px rgba(168,85,247,.45);
-    }
+    .search-result-title{font-size:.92rem;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .search-result-meta{font-size:.76rem;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .search-result-actions{display:flex;align-items:center;flex-shrink:0;}
     .search-result-dots{
-      background:none;border:none;cursor:pointer;color:rgba(255,255,255,.38);
-      font-size:1.2rem;padding:4px 7px;transition:color .15s;opacity:0;
+      background:none;border:none;cursor:pointer;color:rgba(255,255,255,.32);
+      font-size:1.35rem;padding:6px 8px;transition:color .15s,background .15s;
+      border-radius:8px;line-height:1;
     }
-    .search-result-row:hover .search-result-dots{opacity:1;}
-    .search-result-dots:hover{color:#fff;}
+    .search-result-dots:hover{color:#fff;background:rgba(255,255,255,.07);}
     .search-empty-state{text-align:center;padding:70px 20px;}
     .search-empty-icon{font-size:3.2rem;margin-bottom:14px;opacity:.45;}
     .search-empty-text{color:var(--muted);font-size:.95rem;line-height:1.6;}
@@ -2634,32 +2668,52 @@ function renderResults(songs, query){
     </div>\`;
     return;
   }
+  const top=songs[0];
+  const rest=songs.slice(1);
+  const heroImg=top.albumCover
+    ?\`<img class="sr-hero-cover" src="\${esc(top.albumCover)}" loading="lazy" onerror="this.outerHTML='<div class=sr-hero-cover-ph>🎵</div>'">\`
+    :\`<div class="sr-hero-cover-ph">🎵</div>\`;
   area.innerHTML=\`
     <div class="search-results-header">
-      <div class="search-results-count">\${songs.length} resultado\${songs.length!==1?"s":""} para "<strong>\${esc(query)}</strong>"</div>
+      <div class="search-results-count">\${songs.length} resultado\${songs.length!==1?"s":""} · "\${esc(query)}"</div>
     </div>
-    \${songs.map((s,i)=>{
+    <div class="sr-hero" data-index="0">
+      \${heroImg}
+      <div class="sr-hero-info">
+        <div class="sr-hero-tag">Mejor resultado</div>
+        <div class="sr-hero-title">\${esc(top.title)}</div>
+        <div class="sr-hero-meta">Canción · \${esc(top.artistName)}</div>
+        <div class="sr-hero-btns">
+          <button class="sr-hero-play"><svg width="13" height="13" fill="currentColor" viewBox="0 0 24 24" style="flex-shrink:0"><polygon points="5 3 19 12 5 21 5 3"/></svg>Reproducir</button>
+          <button class="sr-hero-more">⋯ Opciones</button>
+        </div>
+      </div>
+    </div>
+    \${rest.length?\`<div class="sr-list-label">Canciones</div>\`:""}
+    \${rest.map((s,i)=>{
       const cover=s.albumCover?\`<img class="search-result-cover" src="\${esc(s.albumCover)}" loading="lazy" onerror="this.outerHTML='<div class=search-result-cover-ph>🎵</div>'">\`:\`<div class="search-result-cover-ph">🎵</div>\`;
       const dur=s.duration?Math.floor(s.duration/60)+":"+(s.duration%60<10?"0":"")+s.duration%60:"";
       const active=currentSong&&currentSong.id===s.id?"active-row":"";
-      return \`<div class="search-result-row \${active}" data-song-id="\${s.id}" data-index="\${i}">
+      return \`<div class="search-result-row \${active}" data-song-id="\${s.id}" data-index="\${i+1}">
         \${cover}
         <div class="search-result-info">
           <div class="search-result-title">\${esc(s.title)}</div>
-          <div class="search-result-meta">\${esc(s.artistName)}\${dur?" · "+dur:""}</div>
+          <div class="search-result-meta">Canción · \${esc(s.artistName)}\${dur?" · "+dur:""}</div>
         </div>
         <div class="search-result-actions">
-          <button class="search-result-play" title="Reproducir"><svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg></button>
-          <button class="search-result-dots" title="Más opciones">⋯</button>
+          <button class="search-result-dots" title="Más opciones">⋮</button>
         </div>
       </div>\`;
     }).join("")}
-    <div style="padding-bottom:24px"></div>
+    <div style="padding-bottom:36px"></div>
   \`;
+  const hero=area.querySelector(".sr-hero");
+  hero.addEventListener("click",()=>playSong(songs[0],songs));
+  hero.querySelector(".sr-hero-play").addEventListener("click",e=>{e.stopPropagation();playSong(songs[0],songs);});
+  hero.querySelector(".sr-hero-more").addEventListener("click",e=>{e.stopPropagation();openCtxMenu(e,songs[0]);});
   area.querySelectorAll(".search-result-row").forEach(row=>{
     const i=parseInt(row.dataset.index);
     row.addEventListener("click",()=>playSong(songs[i],songs));
-    row.querySelector(".search-result-play").addEventListener("click",e=>{e.stopPropagation();playSong(songs[i],songs);});
     row.querySelector(".search-result-dots").addEventListener("click",e=>{e.stopPropagation();openCtxMenu(e,songs[i]);});
   });
   highlightRows();
