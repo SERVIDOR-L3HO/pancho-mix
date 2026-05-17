@@ -910,6 +910,7 @@ const HTML = `<!DOCTYPE html>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <title>PANCHO MIX</title>
+  <!-- OG_META -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
@@ -5530,12 +5531,47 @@ function renderFavModalResults(results){
 </body>
 </html>`;
 
-app.get("/", (req, res) => {
+app.get("/", async (req, res) => {
   res.setHeader("Content-Type", "text/html; charset=utf-8");
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
   res.setHeader("Pragma", "no-cache");
   res.setHeader("Expires", "0");
-  res.send(HTML);
+
+  const q = (req.query.q || "").trim();
+  let ogMeta = `
+  <meta property="og:site_name" content="PANCHO MIX"/>
+  <meta property="og:title" content="PANCHO MIX — Música sin límites"/>
+  <meta property="og:description" content="Escucha música gratis: pop, rock, reggaeton, electrónica y más."/>
+  <meta property="og:type" content="website"/>
+  <meta name="twitter:card" content="summary"/>
+  <meta name="twitter:title" content="PANCHO MIX — Música sin límites"/>
+  <meta name="twitter:description" content="Escucha música gratis: pop, rock, reggaeton, electrónica y más."/>`;
+
+  if (q.length >= 2) {
+    try {
+      let songs = await searchSoundfly(q, 5);
+      if (!songs.length) songs = await searchMusicaCom(q, 5);
+      const song = songs[0];
+      if (song) {
+        const title = `${song.title} — ${song.artistName || "PANCHO MIX"}`;
+        const desc = `🎵 Escucha "${song.title}" de ${song.artistName || "?"} en PANCHO MIX — música gratis.`;
+        const image = song.albumCover || "";
+        ogMeta = `
+  <meta property="og:site_name" content="PANCHO MIX"/>
+  <meta property="og:title" content="${title.replace(/"/g, "&quot;")}"/>
+  <meta property="og:description" content="${desc.replace(/"/g, "&quot;")}"/>
+  <meta property="og:type" content="music.song"/>
+  ${image ? `<meta property="og:image" content="${image.replace(/"/g, "&quot;")}"/>` : ""}
+  ${image ? `<meta property="og:image:width" content="500"/><meta property="og:image:height" content="500"/>` : ""}
+  <meta name="twitter:card" content="${image ? "summary_large_image" : "summary"}"/>
+  <meta name="twitter:title" content="${title.replace(/"/g, "&quot;")}"/>
+  <meta name="twitter:description" content="${desc.replace(/"/g, "&quot;")}"/>
+  ${image ? `<meta name="twitter:image" content="${image.replace(/"/g, "&quot;")}"/>` : ""}`;
+      }
+    } catch (e) { /* use default og tags */ }
+  }
+
+  res.send(HTML.replace("<!-- OG_META -->", ogMeta));
 });
 
 // ─── Start ────────────────────────────────────────────────────────────────────
