@@ -702,6 +702,89 @@ const HTML = `<!DOCTYPE html>
     }
     .sec-action:hover{color:#fff;border-color:var(--border2);}
 
+    /* ── PARA TI CAROUSEL ── */
+    .pt-carousel{display:flex;gap:16px;overflow-x:auto;padding:0 0 12px;scrollbar-width:none;}
+    .pt-carousel::-webkit-scrollbar{display:none;}
+    .pt-card{
+      flex-shrink:0;width:210px;border-radius:20px;overflow:hidden;cursor:pointer;
+      position:relative;transition:transform .2s,box-shadow .2s;
+      box-shadow:0 8px 32px rgba(0,0,0,.4);
+    }
+    .pt-card:hover{transform:translateY(-4px) scale(1.02);box-shadow:0 16px 48px rgba(0,0,0,.55);}
+    .pt-card:active{transform:scale(.97);}
+    .pt-card-bg{
+      position:absolute;inset:0;
+      background:var(--pt-grad,linear-gradient(135deg,#a855f7,#6366f1));
+      z-index:0;
+    }
+    .pt-card-glass{
+      position:absolute;inset:0;z-index:1;
+      background:linear-gradient(160deg,rgba(255,255,255,.13) 0%,rgba(255,255,255,.04) 45%,rgba(0,0,0,.15) 100%);
+      backdrop-filter:blur(0px);
+    }
+    .pt-card-shine{
+      position:absolute;top:-60%;left:-30%;width:80%;height:120%;
+      background:radial-gradient(ellipse,rgba(255,255,255,.18) 0%,transparent 70%);
+      transform:rotate(-30deg);pointer-events:none;z-index:2;
+    }
+    .pt-cover-grid{
+      position:relative;z-index:3;
+      display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;
+      width:100%;height:130px;overflow:hidden;
+    }
+    .pt-cover-grid img{width:100%;height:100%;object-fit:cover;}
+    .pt-cover-icon{
+      position:relative;z-index:3;
+      width:100%;height:130px;display:flex;align-items:center;justify-content:center;
+      font-size:4rem;
+    }
+    .pt-card-body{
+      position:relative;z-index:3;
+      padding:12px 14px 14px;
+      background:linear-gradient(to bottom,rgba(0,0,0,.05),rgba(0,0,0,.35));
+    }
+    .pt-card-name{
+      font-size:.92rem;font-weight:800;color:#fff;
+      letter-spacing:-.015em;line-height:1.25;
+      text-shadow:0 1px 8px rgba(0,0,0,.4);
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    }
+    .pt-card-desc{
+      font-size:.72rem;color:rgba(255,255,255,.65);margin-top:4px;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    }
+    .pt-card-tag{
+      display:inline-flex;align-items:center;gap:4px;
+      margin-top:8px;padding:3px 10px;border-radius:50px;
+      background:rgba(255,255,255,.15);backdrop-filter:blur(8px);
+      font-size:.68rem;font-weight:700;color:#fff;letter-spacing:.03em;text-transform:uppercase;
+    }
+
+    /* ── DICE FAB ── */
+    .dice-fab{
+      position:fixed;
+      bottom:calc(var(--player-h,80px) + 20px);
+      right:20px;
+      z-index:900;
+      width:52px;height:52px;border-radius:50%;
+      background:linear-gradient(135deg,rgba(168,85,247,.75),rgba(99,102,241,.75));
+      backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+      border:1px solid rgba(255,255,255,.2);
+      display:flex;align-items:center;justify-content:center;
+      font-size:1.5rem;cursor:pointer;
+      box-shadow:0 6px 28px rgba(168,85,247,.45),0 2px 8px rgba(0,0,0,.4);
+      transition:transform .18s,box-shadow .18s,opacity .2s;
+    }
+    .dice-fab:hover{transform:scale(1.1) rotate(-8deg);box-shadow:0 10px 40px rgba(168,85,247,.65);}
+    .dice-fab:active{transform:scale(.93) rotate(20deg);}
+    .dice-fab.rolling{animation:diceRoll .4s ease-out;}
+    @keyframes diceRoll{
+      0%{transform:rotate(0deg) scale(1);}
+      30%{transform:rotate(120deg) scale(1.15);}
+      60%{transform:rotate(300deg) scale(.95);}
+      100%{transform:rotate(360deg) scale(1);}
+    }
+
     /* ── SONG ROWS (Selección rápida style) ── */
     .song-list{
       background:var(--glass);
@@ -2067,6 +2150,9 @@ const HTML = `<!DOCTYPE html>
   </div>
 </div>
 
+<!-- DICE FAB -->
+<button class="dice-fab" id="diceFab" title="Canción aleatoria">🎲</button>
+
 <!-- MINI PLAYER -->
 <div class="mini-player" id="miniPlayer" style="display:none">
   <div class="mini-progress" id="miniProgress"><div class="mini-progress-fill" id="miniProgressFill" style="width:0%"></div></div>
@@ -2876,6 +2962,8 @@ function renderHome(songs, gridSongs){
       \`).join("")}</div>
     </div>\`:"";
 
+  const paraTiPlaylists=buildParaTiPlaylists(songs);
+
   const content=document.getElementById("mainContent");
   content.innerHTML=\`
     <div class="chips" id="genreChips">
@@ -2888,6 +2976,27 @@ function renderHome(songs, gridSongs){
       <div class="chip" data-genre="electronica">Electrónica</div>
     </div>
     \${recentHtml}
+    <div class="sec" id="paraTiSec">
+      <div class="sec-hdr">
+        <div class="sec-title" style="font-size:1.15rem;font-weight:900;letter-spacing:-.03em">Para ti ✨</div>
+        <button class="sec-action" id="diceBtn" style="display:flex;align-items:center;gap:6px;font-size:.78rem;">🎲 Sorpréndeme</button>
+      </div>
+      <div class="pt-carousel" id="ptCarousel">
+        \${paraTiPlaylists.map((pl,i)=>\`
+          <div class="pt-card" data-pt-index="\${i}" style="--pt-grad:\${pl.gradient}">
+            <div class="pt-card-bg"></div>
+            <div class="pt-card-glass"></div>
+            <div class="pt-card-shine"></div>
+            <div class="pt-cover-icon" id="ptCover\${i}">\${pl.icon}</div>
+            <div class="pt-card-body">
+              <div class="pt-card-name">\${esc(pl.name)}</div>
+              <div class="pt-card-desc">\${esc(pl.desc)}</div>
+              <div class="pt-card-tag">\${pl.tag}</div>
+            </div>
+          </div>
+        \`).join("")}
+      </div>
+    </div>
     <div class="sec">
       <div class="sec-hdr">
         <div class="sec-title">Selección rápida</div>
@@ -2947,6 +3056,25 @@ function renderHome(songs, gridSongs){
     playSong(arr[0],arr);
     showToast("🔀 Reproduciendo en aleatorio");
   });
+
+  const diceBtnInline=content.querySelector("#diceBtn");
+  if(diceBtnInline)diceBtnInline.addEventListener("click",()=>playDiceSong(songs));
+
+  content.querySelectorAll(".pt-card").forEach(card=>{
+    const i=parseInt(card.dataset.ptIndex);
+    card.addEventListener("click",()=>{
+      const pl=paraTiPlaylists[i];
+      if(pl&&pl.songs&&pl.songs.length){
+        const playlist={
+          name:pl.name,desc:pl.desc,icon:pl.icon,
+          genre:"trending",color:pl.gradient,id:"parati-"+i
+        };
+        renderPlaylistPage(playlist,pl.songs,null);
+      }
+    });
+  });
+
+  loadParaTiCovers(paraTiPlaylists,content);
 
   highlightRows();
   enrichListCovers(songs);
@@ -3249,6 +3377,75 @@ async function doSearch(q){
 function syncChips(genre){
   document.querySelectorAll(".chip").forEach(c=>c.classList.toggle("active",c.dataset.genre===genre));
 }
+
+// ─── Para Ti & Dice ────────────────────────────────────────────────────────────
+const PARA_TI_DEFS=[
+  {name:"Tu mix de hoy",   desc:"Basado en lo que escuchas",  icon:"🎯", tag:"🔥 Personalizado",
+   gradient:"linear-gradient(135deg,#a855f7 0%,#6366f1 100%)"},
+  {name:"Descubrimiento",  desc:"Canciones que quizás no conoces", icon:"🌟", tag:"✨ Nuevo",
+   gradient:"linear-gradient(135deg,#0ea5e9 0%,#2563eb 100%)"},
+  {name:"Sesión nocturna", desc:"Para cuando cae la noche",   icon:"🌙", tag:"🌙 Noche",
+   gradient:"linear-gradient(135deg,#1e1b4b 0%,#4c1d95 50%,#6d28d9 100%)"},
+  {name:"Energía pura",    desc:"Ritmo sin parar",            icon:"⚡", tag:"💥 Energy",
+   gradient:"linear-gradient(135deg,#f59e0b 0%,#ef4444 100%)"},
+  {name:"Chill session",   desc:"Relájate y disfruta",        icon:"🌊", tag:"😌 Chill",
+   gradient:"linear-gradient(135deg,#059669 0%,#0891b2 100%)"},
+  {name:"Vibra latina",    desc:"El sabor que te mueve",      icon:"💃", tag:"🌴 Latina",
+   gradient:"linear-gradient(135deg,#dc2626 0%,#ea580c 100%)"},
+];
+
+function buildParaTiPlaylists(allSongs){
+  const shuffled=shuffleArr([...allSongs]);
+  return PARA_TI_DEFS.map((def,i)=>{
+    const offset=(i*7)%Math.max(shuffled.length,1);
+    const slice=[];
+    for(let k=0;k<20;k++) slice.push(shuffled[(offset+k)%shuffled.length]);
+    return {...def, songs:slice};
+  });
+}
+
+function loadParaTiCovers(playlists,container){
+  playlists.forEach((pl,i)=>{
+    const el=container.querySelector(\`#ptCover\${i}\`);
+    if(!el)return;
+    const withCovers=pl.songs.filter(s=>s.albumCover).slice(0,4);
+    if(withCovers.length>=4){
+      el.className="pt-cover-grid";
+      el.innerHTML=withCovers.map(s=>\`<img src="\${esc(s.albumCover)}" loading="lazy" onerror="this.style.background='rgba(0,0,0,.3)'">\`).join("");
+    } else if(withCovers.length>=1){
+      el.className="pt-cover-icon";
+      el.style.padding="0";
+      el.innerHTML=\`<img src="\${esc(withCovers[0].albumCover)}" style="width:100%;height:100%;object-fit:cover" loading="lazy">\`;
+    }
+  });
+}
+
+function playDiceSong(songs){
+  if(!songs||!songs.length)return;
+  const fab=document.getElementById("diceFab");
+  if(fab){fab.classList.remove("rolling");void fab.offsetWidth;fab.classList.add("rolling");}
+  const arr=shuffleArr([...songs]);
+  shuffleOn=true;
+  const fpsh=document.getElementById("fpShuffle");
+  if(fpsh)fpsh.classList.add("on");
+  playSong(arr[0],arr);
+  showToast(\`🎲 ¡Suerte! Reproduciendo "\${arr[0].title}"\`);
+  setTimeout(()=>{if(fab)fab.classList.remove("rolling");},500);
+}
+
+// Dice FAB global init (runs once on page load)
+(function initDiceFab(){
+  function tryBind(){
+    const fab=document.getElementById("diceFab");
+    if(!fab){setTimeout(tryBind,200);return;}
+    fab.addEventListener("click",()=>{
+      const songs=allSongs&&allSongs.length?allSongs:[];
+      if(!songs.length){showToast("Cargando canciones...");return;}
+      playDiceSong(songs);
+    });
+  }
+  tryBind();
+})();
 
 // ─── Category & Playlist Pages ─────────────────────────────────────────────────
 function getCategoryPlaylists(cat){
