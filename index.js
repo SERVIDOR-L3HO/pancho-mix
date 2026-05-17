@@ -207,8 +207,10 @@ async function getYouTubeIdsForSong(artist, title, limit = 25) {
   const key = `${artist}|${title}`.toLowerCase();
   if (ytSearchCache[key] !== undefined) return ytSearchCache[key];
   try {
-    // Search with multiple queries to find more embeddable candidates
+    // Search with multiple queries — "topic" first finds YouTube Music auto-generated
+    // channel videos (always embeddable), then fall back to audio/letra variants
     const queries = [
+      `${artist} ${title} topic`,
       `${artist} ${title} audio`,
       `${artist} ${title} letra`,
       `${artist} ${title}`,
@@ -2378,7 +2380,7 @@ const HTML = `<!DOCTYPE html>
         <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
       </button>
       <div class="fp-mode-toggle">
-        <button class="fp-mode-btn active" id="fpModeAudio">
+        <button class="fp-mode-btn" id="fpModeAudio">
           <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z"/><path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
           Audio
         </button>
@@ -2624,7 +2626,7 @@ let ytPlayer=null, ytReady=false, progressInterval=null;
 let ytCandidates=[], ytCandidateIdx=0;
 let currentGenre="trending", currentView="home";
 let searchTimeout=null;
-let playerMode="audio";
+let playerMode=localStorage.getItem("playerMode")||"video";
 let shuffleOn=false, repeatMode=0; // 0=off, 1=all, 2=one
 let liked=false;
 let fullPlayerOpen=false;
@@ -2779,6 +2781,8 @@ function openFullPlayer(){
   document.body.style.overflow="hidden";
   updateFullPlayer();
   renderQueueList();
+  // Apply saved mode (video or audio) when opening
+  setTimeout(()=>setPlayerMode(playerMode),300);
 }
 
 function closeFullPlayer(){
@@ -2914,7 +2918,8 @@ async function playSong(song,newQueue){
     const load=()=>{
       if(ytReady&&ytPlayer){
         ytPlayer.loadVideoById(ytId);
-        if(playerMode==="video"&&fullPlayerOpen) setTimeout(()=>setPlayerMode("video"),600);
+        // Auto-show video whenever full player is open
+        if(fullPlayerOpen) setTimeout(()=>setPlayerMode(playerMode),600);
       } else setTimeout(load,300);
     };
     load();
@@ -3213,8 +3218,8 @@ document.getElementById("miniPlayer").addEventListener("click",e=>{
 
 // ─── Full player events ────────────────────────────────────────────────────────
 document.getElementById("fpBack").addEventListener("click",closeFullPlayer);
-document.getElementById("fpModeAudio").addEventListener("click",()=>setPlayerMode("audio"));
-document.getElementById("fpModeVideo").addEventListener("click",()=>setPlayerMode("video"));
+document.getElementById("fpModeAudio").addEventListener("click",()=>{setPlayerMode("audio");localStorage.setItem("playerMode","audio");});
+document.getElementById("fpModeVideo").addEventListener("click",()=>{setPlayerMode("video");localStorage.setItem("playerMode","video");});
 document.getElementById("fpPlayBtn").addEventListener("click",togglePlay);
 document.getElementById("fpPrevBtn").addEventListener("click",prevSong);
 document.getElementById("fpNextBtn").addEventListener("click",nextSong);
@@ -4607,6 +4612,9 @@ document.getElementById("miniProgress").addEventListener("click",e=>{
 });
 
 // ─── Boot ──────────────────────────────────────────────────────────────────────
+// Set initial Audio/Video button state from saved preference
+document.getElementById("fpModeAudio").classList.toggle("active", playerMode==="audio");
+document.getElementById("fpModeVideo").classList.toggle("active", playerMode==="video");
 updateProfileStats();
 setView("home");
 </script>
