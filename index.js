@@ -1695,7 +1695,7 @@ const HTML = `<!DOCTYPE html>
       transform:scale(1.15);
       transition:background-image .8s;
     }
-    .fp-content{position:relative;z-index:1;display:flex;flex-direction:column;height:100%;overflow-y:auto;overflow-x:hidden;}
+    .fp-content{position:relative;z-index:1;display:flex;flex-direction:column;height:100%;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
     .fp-content::-webkit-scrollbar{display:none;}
 
     /* Header */
@@ -1736,11 +1736,11 @@ const HTML = `<!DOCTYPE html>
 
     /* Media */
     .fp-media{
-      flex-shrink:0;padding:14px 28px 0;
+      flex-shrink:0;padding:8px 20px 0;
       display:flex;align-items:center;justify-content:center;
     }
     .fp-art{
-      width:100%;max-width:300px;aspect-ratio:1;
+      width:100%;max-width:min(260px,62vw);aspect-ratio:1;
       border-radius:20px;overflow:hidden;
       box-shadow:0 32px 96px rgba(0,0,0,.65);
       border:1px solid rgba(255,255,255,.08);
@@ -1765,7 +1765,7 @@ const HTML = `<!DOCTYPE html>
     /* Info */
     .fp-info{
       display:flex;align-items:center;justify-content:space-between;gap:12px;
-      padding:20px 24px 6px;
+      padding:14px 24px 4px;flex-shrink:0;
     }
     .fp-info-left{flex:1;min-width:0;}
     .fp-title{
@@ -1854,7 +1854,7 @@ const HTML = `<!DOCTYPE html>
     /* Controls */
     .fp-controls{
       display:flex;align-items:center;justify-content:space-between;
-      padding:10px 24px 14px;
+      padding:8px 24px 10px;flex-shrink:0;
     }
     .fp-ctrl{
       width:46px;height:46px;border-radius:50%;
@@ -2760,6 +2760,7 @@ async function playSong(song,newQueue){
   addToRecentlyPlayed(song);
   updateProfileStats();
   enrichCoverFromDeezer(song);
+  if(queue.length<15)expandQueueWithGenre(song);
 
   ytCandidates=[]; ytCandidateIdx=0;
   let ytId=getYtId(song.audioUrl);
@@ -2822,6 +2823,21 @@ function addSongToQueue(song){
   showToast("Agregado a la fila ✓");
   updateProfileStats();
   if(fullPlayerOpen)renderQueueList();
+}
+
+async function expandQueueWithGenre(song){
+  const genre=song.genre||currentGenre;
+  if(!genre||genre==="trending")return;
+  try{
+    const res=await fetch("/api/songs?genre="+genre+"&limit=40");
+    if(!res.ok)return;
+    const data=await res.json();
+    const newSongs=(data.songs||[]).filter(s=>!queue.some(q=>q.id===s.id));
+    if(newSongs.length){
+      queue.push(...newSongs);
+      if(fullPlayerOpen)renderQueueList();
+    }
+  }catch{}
 }
 
 function updateMiniPlayer(){
