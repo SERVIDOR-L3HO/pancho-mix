@@ -2139,13 +2139,13 @@ const HTML = `<!DOCTYPE html>
       .album-grid{grid-template-columns:repeat(2,1fr);}
     }
 
-    #yt-holder{position:fixed;bottom:-2px;left:-2px;width:1px;height:1px;opacity:0;pointer-events:none;z-index:401;border-radius:16px;overflow:hidden;transition:none;}
-    #yt-holder.video-visible{opacity:1;pointer-events:auto;bottom:auto;left:auto;}
+    #yt-holder{position:fixed;bottom:-2px;left:-2px;width:1px;height:1px;opacity:0;pointer-events:none;z-index:401;overflow:hidden;transition:none;}
+    #yt-holder.video-visible{inset:0;width:100%;height:100%;bottom:auto;left:auto;top:0;opacity:1;pointer-events:auto;border-radius:0;}
     #yt-anchor{width:100%;height:100%;border:none;display:block;background:#000;}
 
     /* ══ FULL PLAYER ══════════════════════════════════════════════════════ */
     .full-player{
-      position:fixed;inset:0;z-index:400;
+      position:fixed;inset:0;z-index:402;
       transform:translateY(100%);
       transition:transform .38s cubic-bezier(.32,.72,0,1);
       display:flex;flex-direction:column;
@@ -2749,7 +2749,7 @@ const HTML = `<!DOCTYPE html>
 
 <!-- ══ FULL PLAYER ══════════════════════════════════════════════════════════ -->
 <div class="full-player" id="fullPlayer">
-  <div class="fp-bg"></div>
+  <div class="fp-bg" id="fpBgGrad"></div>
   <div class="fp-bg-art" id="fpBgArt"></div>
   <div class="fp-content">
 
@@ -3196,8 +3196,8 @@ function openFullPlayer(){
   document.body.style.overflow="hidden";
   updateFullPlayer();
   renderQueueList();
-  // Apply saved mode after animation completes (animation is 380ms)
-  setTimeout(()=>setPlayerMode(playerMode),420);
+  // Apply saved mode — no coordinate calc so timing doesn't matter
+  setTimeout(()=>setPlayerMode(playerMode),100);
 }
 
 function closeFullPlayer(){
@@ -3262,60 +3262,38 @@ function renderQueueList(){
 }
 
 // ─── Video mode ───────────────────────────────────────────────────────────────
-// The YouTube iframe NEVER moves in the DOM — moving it causes a reload/error.
-// Instead we reposition #yt-holder with CSS to overlay #fpVideoWrap visually.
-
-let _posRetries=0;
-function positionVideoHolder(){
-  const videoWrap=document.getElementById("fpVideoWrap");
-  const holder=document.getElementById("yt-holder");
-  const rect=videoWrap.getBoundingClientRect();
-  // If rect is still zero (layout not ready), retry up to 20 times
-  if((rect.width<10||rect.height<10)&&_posRetries<20){
-    _posRetries++;
-    setTimeout(positionVideoHolder,60);
-    return;
-  }
-  _posRetries=0;
-  holder.classList.add("video-visible");
-  holder.style.top=rect.top+"px";
-  holder.style.left=rect.left+"px";
-  holder.style.width=rect.width+"px";
-  holder.style.height=rect.height+"px";
-  try{
-    const iframe=ytPlayer?.getIframe();
-    if(iframe)iframe.style.cssText="width:100%;height:100%;border:none;background:#000;";
-  }catch(e){}
-}
-
+// yt-holder fills the full viewport (z-index:401) when in video mode.
+// full-player sits above it (z-index:402) but its background (fpBgGrad/fpBgArt)
+// is hidden, making it transparent so the video shows through.
+// No coordinate calculation — works regardless of address bar / orientation.
 function setPlayerMode(mode){
   playerMode=mode;
   document.getElementById("fpModeAudio").classList.toggle("active",mode==="audio");
   document.getElementById("fpModeVideo").classList.toggle("active",mode==="video");
   const artEl=document.getElementById("fpArt");
-  const videoWrap=document.getElementById("fpVideoWrap");
+  const bgGrad=document.getElementById("fpBgGrad");
+  const bgArt=document.getElementById("fpBgArt");
   const holder=document.getElementById("yt-holder");
   if(mode==="video"){
     artEl.style.display="none";
-    videoWrap.style.display="block";
-    // Use setTimeout(0) so the browser finishes layout before we read the rect
-    _posRetries=0;
-    setTimeout(positionVideoHolder,0);
+    // Hide full-player backgrounds so the video underneath shows through
+    bgGrad.style.display="none";
+    bgArt.style.display="none";
+    // Make yt-holder fill the full viewport — no coordinates needed
+    holder.style.cssText="position:fixed;inset:0;width:100%;height:100%;opacity:1;pointer-events:auto;z-index:401;";
+    holder.classList.add("video-visible");
+    try{
+      const iframe=ytPlayer?.getIframe();
+      if(iframe)iframe.style.cssText="width:100%;height:100%;border:none;display:block;";
+    }catch(e){}
   } else {
     artEl.style.display="";
-    videoWrap.style.display="none";
+    bgGrad.style.display="";
+    bgArt.style.display="";
     holder.classList.remove("video-visible");
     holder.style.cssText="position:fixed;bottom:-2px;left:-2px;width:1px;height:1px;opacity:0;pointer-events:none;";
   }
 }
-
-// Reposition video on resize/orientation change (mobile address bar, rotation, etc.)
-window.addEventListener("resize",()=>{
-  if(playerMode==="video"&&fullPlayerOpen){
-    _posRetries=0;
-    setTimeout(positionVideoHolder,50);
-  }
-});
 
 function returnVideoToHolder(){
   // No-op: iframe always stays inside #yt-holder — never moved in the DOM
