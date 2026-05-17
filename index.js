@@ -3348,11 +3348,11 @@ function renderHome(songs, gridSongs){
   content.querySelectorAll(".pt-card").forEach(card=>{
     const i=parseInt(card.dataset.ptIndex);
     card.addEventListener("click",()=>{
-      const pl=paraTiPlaylists[i];
+      const pl=_paraTimePlaylists[i];
       if(pl&&pl.songs&&pl.songs.length){
         const playlist={
           name:pl.name,desc:pl.desc,icon:pl.icon,
-          genre:"trending",color:pl.gradient,id:"parati-"+i
+          genre:pl.genres?pl.genres[0]:"trending",color:pl.gradient,id:"parati-"+i
         };
         renderPlaylistPage(playlist,pl.songs,null);
       }
@@ -3360,6 +3360,7 @@ function renderHome(songs, gridSongs){
   });
 
   loadParaTiCovers(paraTiPlaylists,content);
+  loadParaTiSongsAsync(content);
   loadNovAlbums(content.querySelector("#novAlbumsScroll"));
 
   highlightRows();
@@ -3861,27 +3862,80 @@ async function openAlbumPage(albumId,albumMeta){
 
 // ─── Para Ti & Dice ────────────────────────────────────────────────────────────
 const PARA_TI_DEFS=[
-  {name:"Tu mix de hoy",   desc:"Basado en lo que escuchas",  icon:"🎯", tag:"🔥 Personalizado",
-   gradient:"linear-gradient(135deg,#a855f7 0%,#6366f1 100%)"},
-  {name:"Descubrimiento",  desc:"Canciones que quizás no conoces", icon:"🌟", tag:"✨ Nuevo",
-   gradient:"linear-gradient(135deg,#0ea5e9 0%,#2563eb 100%)"},
-  {name:"Sesión nocturna", desc:"Para cuando cae la noche",   icon:"🌙", tag:"🌙 Noche",
-   gradient:"linear-gradient(135deg,#1e1b4b 0%,#4c1d95 50%,#6d28d9 100%)"},
-  {name:"Energía pura",    desc:"Ritmo sin parar",            icon:"⚡", tag:"💥 Energy",
-   gradient:"linear-gradient(135deg,#f59e0b 0%,#ef4444 100%)"},
-  {name:"Chill session",   desc:"Relájate y disfruta",        icon:"🌊", tag:"😌 Chill",
-   gradient:"linear-gradient(135deg,#059669 0%,#0891b2 100%)"},
-  {name:"Vibra latina",    desc:"El sabor que te mueve",      icon:"💃", tag:"🌴 Latina",
-   gradient:"linear-gradient(135deg,#dc2626 0%,#ea580c 100%)"},
+  {name:"Tu mix de hoy",   desc:"Basado en lo que escuchas",  icon:"🎯", tag:"🔥 PERSONALIZADO",
+   gradient:"linear-gradient(135deg,#a855f7 0%,#6366f1 100%)",
+   genres:["pop","reggaeton","latina","hip-hop"]},
+  {name:"Descubrimiento",  desc:"Canciones que quizás no conoces", icon:"🌟", tag:"✨ NUEVO",
+   gradient:"linear-gradient(135deg,#0ea5e9 0%,#2563eb 100%)",
+   genres:["electronica","rock","hip-hop","pop"]},
+  {name:"Sesión nocturna", desc:"Para cuando cae la noche",   icon:"🌙", tag:"🌙 NOCHE",
+   gradient:"linear-gradient(135deg,#1e1b4b 0%,#4c1d95 50%,#6d28d9 100%)",
+   genres:["latina","reggaeton"]},
+  {name:"Energía pura",    desc:"Ritmo sin parar",            icon:"⚡", tag:"💥 ENERGY",
+   gradient:"linear-gradient(135deg,#f59e0b 0%,#ef4444 100%)",
+   genres:["reggaeton","hip-hop","rock"]},
+  {name:"Chill session",   desc:"Relájate y disfruta",        icon:"🌊", tag:"😌 CHILL",
+   gradient:"linear-gradient(135deg,#059669 0%,#0891b2 100%)",
+   genres:["pop","latina"]},
+  {name:"Vibra latina",    desc:"El sabor que te mueve",      icon:"💃", tag:"🌴 LATINA",
+   gradient:"linear-gradient(135deg,#dc2626 0%,#ea580c 100%)",
+   genres:["latina","reggaeton"]},
 ];
 
+// Seeded shuffle — same seed gives same order (changes every hour)
+function seededShuffle(arr,seed){
+  const a=[...arr]; let s=seed;
+  for(let i=a.length-1;i>0;i--){
+    s=(Math.imul(s,1664525)+1013904223)|0;
+    const j=Math.abs(s)%(i+1);
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+let _paraTimePlaylists=[];
+const _paraGenreCache={};
+
+async function fetchGenreForParaTi(genre){
+  if(_paraGenreCache[genre])return _paraGenreCache[genre];
+  try{
+    const res=await fetch("/api/songs?genre="+genre+"&limit=35");
+    if(!res.ok)return[];
+    const data=await res.json();
+    const songs=(data.songs||[]).map(s=>({...s,genre}));
+    _paraGenreCache[genre]=songs;
+    return songs;
+  }catch{return[];}
+}
+
 function buildParaTiPlaylists(allSongs){
-  const shuffled=shuffleArr([...allSongs]);
-  return PARA_TI_DEFS.map((def,i)=>{
-    const offset=(i*7)%Math.max(shuffled.length,1);
-    const slice=[];
-    for(let k=0;k<20;k++) slice.push(shuffled[(offset+k)%shuffled.length]);
-    return {...def, songs:slice};
+  const hourSeed=Math.floor(Date.now()/(1000*60*60));
+  _paraTimePlaylists=PARA_TI_DEFS.map((def,i)=>{
+    const songs=seededShuffle(allSongs,hourSeed+i*137).slice(0,20);
+    return{...def,songs};
+  });
+  return _paraTimePlaylists;
+}
+
+async function loadParaTiSongsAsync(container){
+  const allGenres=[...new Set(PARA_TI_DEFS.flatMap(d=>d.genres))];
+  await Promise.all(allGenres.map(g=>fetchGenreForParaTi(g)));
+  const hourSeed=Math.floor(Date.now()/(1000*60*60));
+  _paraTimePlaylists.forEach((pl,i)=>{
+    const pool=pl.genres.flatMap(g=>_paraGenreCache[g]||[]);
+    const deduped=[...new Map(pool.map(s=>[s.id,s])).values()];
+    pl.songs=seededShuffle(deduped,hourSeed+i*137).slice(0,30);
+    // Refresh covers
+    const el=container.querySelector(\`#ptCover\${i}\`);
+    if(!el)return;
+    const withCovers=pl.songs.filter(s=>s.albumCover).slice(0,4);
+    if(withCovers.length>=4){
+      el.className="pt-cover-grid";
+      el.innerHTML=withCovers.map(s=>\`<img src="\${esc(s.albumCover)}" loading="lazy" onerror="this.style.background='rgba(0,0,0,.3)'">\`).join("");
+    }else if(withCovers.length>=1){
+      el.className="pt-cover-icon";el.style.padding="0";
+      el.innerHTML=\`<img src="\${esc(withCovers[0].albumCover)}" style="width:100%;height:100%;object-fit:cover" loading="lazy">\`;
+    }
   });
 }
 
