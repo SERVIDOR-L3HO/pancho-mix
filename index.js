@@ -332,6 +332,31 @@ app.get("/api/songs", async (req, res) => {
   }
 });
 
+// GET /api/dice — truly random songs from a random genre
+app.get("/api/dice", async (req, res) => {
+  const ALL_DICE_GENRES = [
+    "pop","reggaeton","rock","latina","hip-hop","trap","indie","electronica",
+    "pop","reggaeton","latina","rock", // weighted so common genres appear more
+  ];
+  // Pick a random genre, different from the last one if possible
+  const last = req.query.last || "";
+  const pool = ALL_DICE_GENRES.filter(g => g !== last);
+  const genre = pool[Math.floor(Math.random() * pool.length)];
+
+  try {
+    // Use cache when available for speed, otherwise fetch fresh
+    const cached = songCache[genre];
+    let songs = cached ? cached.songs : await getSongsFromPlaylist(genre, 25);
+    if (!cached) songCache[genre] = { songs, ts: Date.now() };
+
+    // Shuffle the list with a fresh seed every request
+    const shuffled = [...songs].sort(() => Math.random() - 0.5);
+    res.json({ songs: shuffled, genre });
+  } catch (err) {
+    res.status(500).json({ error: err.message, songs: [], genre });
+  }
+});
+
 // GET /api/trending — top artists' songs
 app.get("/api/trending", async (req, res) => {
   const cached = songCache["__trending__"];
@@ -763,26 +788,37 @@ const HTML = `<!DOCTYPE html>
     /* ── DICE FAB ── */
     .dice-fab{
       position:fixed;
-      bottom:calc(var(--player-h,80px) + 20px);
-      right:20px;
+      bottom:calc(var(--player-h,80px) + 18px);
+      right:18px;
       z-index:900;
-      width:52px;height:52px;border-radius:50%;
-      background:linear-gradient(135deg,rgba(168,85,247,.75),rgba(99,102,241,.75));
-      backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
-      border:1px solid rgba(255,255,255,.2);
-      display:flex;align-items:center;justify-content:center;
-      font-size:1.5rem;cursor:pointer;
-      box-shadow:0 6px 28px rgba(168,85,247,.45),0 2px 8px rgba(0,0,0,.4);
-      transition:transform .18s,box-shadow .18s,opacity .2s;
+      width:56px;height:56px;border-radius:18px;
+      background:linear-gradient(145deg,#a855f7,#7c3aed);
+      border:1.5px solid rgba(255,255,255,.22);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+      font-size:1.35rem;cursor:pointer;line-height:1;
+      box-shadow:0 8px 32px rgba(168,85,247,.5),0 2px 8px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.18);
+      transition:transform .18s,box-shadow .18s;
+      user-select:none;
     }
-    .dice-fab:hover{transform:scale(1.1) rotate(-8deg);box-shadow:0 10px 40px rgba(168,85,247,.65);}
-    .dice-fab:active{transform:scale(.93) rotate(20deg);}
-    .dice-fab.rolling{animation:diceRoll .4s ease-out;}
+    .dice-fab:hover{
+      transform:translateY(-3px) scale(1.06);
+      box-shadow:0 14px 44px rgba(168,85,247,.65),0 4px 12px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.18);
+    }
+    .dice-fab:active{transform:scale(.92);}
+    .dice-fab-label{font-size:.48rem;font-weight:800;color:rgba(255,255,255,.75);letter-spacing:.08em;text-transform:uppercase;}
+    .dice-fab.rolling{animation:diceRoll .45s cubic-bezier(.36,.07,.19,.97);}
+    .dice-fab.loading{pointer-events:none;opacity:.8;}
+    .dice-fab.loading .dice-emoji{animation:diceSpin .6s linear infinite;}
     @keyframes diceRoll{
-      0%{transform:rotate(0deg) scale(1);}
-      30%{transform:rotate(120deg) scale(1.15);}
-      60%{transform:rotate(300deg) scale(.95);}
+      0%  {transform:rotate(0deg)   scale(1);}
+      20% {transform:rotate(-15deg) scale(1.1);}
+      50% {transform:rotate(200deg) scale(1.15);}
+      80% {transform:rotate(340deg) scale(.95);}
       100%{transform:rotate(360deg) scale(1);}
+    }
+    @keyframes diceSpin{
+      from{transform:rotate(0deg);}
+      to{transform:rotate(360deg);}
     }
 
     /* ── SONG ROWS (Selección rápida style) ── */
@@ -2151,7 +2187,10 @@ const HTML = `<!DOCTYPE html>
 </div>
 
 <!-- DICE FAB -->
-<button class="dice-fab" id="diceFab" title="Canción aleatoria">🎲</button>
+<button class="dice-fab" id="diceFab" title="Canción aleatoria">
+  <span class="dice-emoji">🎲</span>
+  <span class="dice-fab-label">Azar</span>
+</button>
 
 <!-- MINI PLAYER -->
 <div class="mini-player" id="miniPlayer" style="display:none">
@@ -3051,7 +3090,7 @@ function renderHome(songs, gridSongs){
   });
 
   const diceBtnInline=content.querySelector("#diceBtn");
-  if(diceBtnInline)diceBtnInline.addEventListener("click",()=>playDiceSong(songs));
+  if(diceBtnInline)diceBtnInline.addEventListener("click",()=>playDiceSong());
 
   content.querySelectorAll(".pt-card").forEach(card=>{
     const i=parseInt(card.dataset.ptIndex);
@@ -3413,17 +3452,42 @@ function loadParaTiCovers(playlists,container){
   });
 }
 
-function playDiceSong(songs){
-  if(!songs||!songs.length)return;
+const GENRE_LABELS={
+  pop:"Pop",reggaeton:"Reggaeton",rock:"Rock",latina:"Latina",
+  "hip-hop":"Hip-Hop",trap:"Trap",indie:"Indie",electronica:"Electrónica"
+};
+let _diceLastGenre="";
+
+async function playDiceSong(){
   const fab=document.getElementById("diceFab");
-  if(fab){fab.classList.remove("rolling");void fab.offsetWidth;fab.classList.add("rolling");}
-  const arr=shuffleArr([...songs]);
-  shuffleOn=true;
-  const fpsh=document.getElementById("fpShuffle");
-  if(fpsh)fpsh.classList.add("on");
-  playSong(arr[0],arr);
-  showToast(\`🎲 ¡Suerte! Reproduciendo "\${arr[0].title}"\`);
-  setTimeout(()=>{if(fab)fab.classList.remove("rolling");},500);
+  if(fab){
+    if(fab.classList.contains("loading"))return;
+    fab.classList.add("loading");
+  }
+  try{
+    const url="/api/dice"+(_diceLastGenre?\`?last=\${encodeURIComponent(_diceLastGenre)}\`:"");
+    const res=await fetch(url);
+    const data=await res.json();
+    const songs=data.songs||[];
+    _diceLastGenre=data.genre||"";
+    if(!songs.length){showToast("No se encontraron canciones, intenta de nuevo");return;}
+    shuffleOn=true;
+    const fpsh=document.getElementById("fpShuffle");
+    if(fpsh)fpsh.classList.add("on");
+    playSong(songs[0],songs);
+    const genreLabel=GENRE_LABELS[data.genre]||data.genre||"";
+    showToast(\`🎲 \${genreLabel?genreLabel+" · ":""}\${esc(songs[0].title)}\`);
+    if(fab){
+      fab.classList.remove("loading");
+      fab.classList.remove("rolling");
+      void fab.offsetWidth;
+      fab.classList.add("rolling");
+      setTimeout(()=>fab.classList.remove("rolling"),500);
+    }
+  }catch(e){
+    showToast("Error al buscar canciones");
+    if(fab)fab.classList.remove("loading");
+  }
 }
 
 // Dice FAB global init (runs once on page load)
@@ -3431,11 +3495,7 @@ function playDiceSong(songs){
   function tryBind(){
     const fab=document.getElementById("diceFab");
     if(!fab){setTimeout(tryBind,200);return;}
-    fab.addEventListener("click",()=>{
-      const songs=allSongs&&allSongs.length?allSongs:[];
-      if(!songs.length){showToast("Cargando canciones...");return;}
-      playDiceSong(songs);
-    });
+    fab.addEventListener("click",()=>playDiceSong());
   }
   tryBind();
 })();
