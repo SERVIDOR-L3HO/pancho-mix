@@ -203,21 +203,30 @@ async function getYouTubeIdForSong(artist, title) {
   return ids.length ? ids[0] : null;
 }
 
-async function getYouTubeIdsForSong(artist, title, limit = 8) {
+async function getYouTubeIdsForSong(artist, title, limit = 25) {
   const key = `${artist}|${title}`.toLowerCase();
   if (ytSearchCache[key] !== undefined) return ytSearchCache[key];
   try {
-    const q = `${artist} ${title} official audio`;
-    const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`;
-    const html = await fetchHtml(url, 10000);
-    const matches = html.match(/"videoId":"([a-zA-Z0-9_-]{11})"/g);
-    if (!matches || !matches.length) { ytSearchCache[key] = []; return []; }
+    // Search with multiple queries to find more embeddable candidates
+    const queries = [
+      `${artist} ${title} audio`,
+      `${artist} ${title} letra`,
+      `${artist} ${title}`,
+    ];
     const seen = new Set();
     const ids = [];
-    for (const m of matches) {
-      const id = m.replace(/"videoId":"/, "").replace(/"$/, "");
-      if (!seen.has(id)) { seen.add(id); ids.push(id); }
+    for (const q of queries) {
       if (ids.length >= limit) break;
+      try {
+        const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`;
+        const html = await fetchHtml(url, 10000);
+        const matches = html.match(/"videoId":"([a-zA-Z0-9_-]{11})"/g) || [];
+        for (const m of matches) {
+          const id = m.replace(/"videoId":"/, "").replace(/"$/, "");
+          if (!seen.has(id)) { seen.add(id); ids.push(id); }
+          if (ids.length >= limit) break;
+        }
+      } catch {}
     }
     ytSearchCache[key] = ids;
     return ids;
@@ -225,6 +234,39 @@ async function getYouTubeIdsForSong(artist, title, limit = 8) {
     ytSearchCache[key] = [];
     return [];
   }
+}
+
+// Check if a YouTube video allows embedding via oEmbed
+const embedCheckCache = {};
+async function isEmbeddable(ytId) {
+  if (embedCheckCache[ytId] !== undefined) return embedCheckCache[ytId];
+  try {
+    const res = await fetch(
+      `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${ytId}&format=json`,
+      { headers: { "User-Agent": USER_AGENT }, signal: AbortSignal.timeout(5000) }
+    );
+    embedCheckCache[ytId] = res.ok;
+    return res.ok;
+  } catch {
+    embedCheckCache[ytId] = false;
+    return false;
+  }
+}
+
+async function getEmbeddableYouTubeIds(artist, title, maxResults = 5) {
+  const allIds = await getYouTubeIdsForSong(artist, title);
+  const embeddable = [];
+  // Check in parallel (batches of 5)
+  for (let i = 0; i < allIds.length && embeddable.length < maxResults; i += 5) {
+    const batch = allIds.slice(i, i + 5);
+    const checks = await Promise.all(batch.map(id => isEmbeddable(id)));
+    for (let j = 0; j < batch.length; j++) {
+      if (checks[j]) embeddable.push(batch[j]);
+      if (embeddable.length >= maxResults) break;
+    }
+  }
+  // Fallback: if none passed the check, return first few anyway
+  return embeddable.length > 0 ? embeddable : allIds.slice(0, 3);
 }
 
 // ─── Soundfly.es search ───────────────────────────────────────────────────────
@@ -649,13 +691,13 @@ app.get("/api/artist-profile", async (req, res) => {
   }
 });
 
-// GET /api/youtube-search-multi?artist=X&title=Y — returns multiple candidate IDs
+// GET /api/youtube-search-multi?artist=X&title=Y — returns embeddable candidate IDs
 app.get("/api/youtube-search-multi", async (req, res) => {
   const artist = (req.query.artist || "").trim();
   const title = (req.query.title || "").trim();
   if (!artist || !title) return res.status(400).json({ error: "artist and title required" });
 
-  const ids = await getYouTubeIdsForSong(artist, title);
+  const ids = await getEmbeddableYouTubeIds(artist, title);
   res.json({ youtubeIds: ids });
 });
 
@@ -2637,7 +2679,8 @@ function updateProfileStats(){
 window.onYouTubeIframeAPIReady=()=>{
   ytPlayer=new YT.Player("yt-anchor",{
     height:"100%",width:"100%",videoId:"",
-    playerVars:{autoplay:0,controls:0,disablekb:1,fs:0,rel:0,modestbranding:1,iv_load_policy:3,showinfo:0},
+    host:"https://www.youtube-nocookie.com",
+    playerVars:{autoplay:0,controls:0,disablekb:1,fs:0,rel:0,modestbranding:1,iv_load_policy:3,showinfo:0,origin:location.origin},
     events:{
       onReady(){ ytReady=true; },
       onStateChange(e){
@@ -2654,14 +2697,15 @@ window.onYouTubeIframeAPIReady=()=>{
       },
       onError(e){
         stopProg();
-        // Error 101/150 = embedding not allowed, try next candidate
+        // Try next embeddable candidate before giving up
         if(ytCandidates.length>0 && ytCandidateIdx<ytCandidates.length-1){
           ytCandidateIdx++;
           const nextId=ytCandidates[ytCandidateIdx];
           if(currentSong){currentSong.audioUrl="yt:"+nextId;}
           try{ytPlayer.loadVideoById(nextId);}catch{}
         } else {
-          nextSong();
+          showToast("No se encontró audio disponible, pasando...");
+          setTimeout(()=>nextSong(),1500);
         }
       }
     }
