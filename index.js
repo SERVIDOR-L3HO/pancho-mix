@@ -2998,13 +2998,6 @@ function renderHome(songs, gridSongs){
       </div>
     </div>
     <div class="sec">
-      <div class="sec-hdr">
-        <div class="sec-title">Selección rápida</div>
-        <button class="sec-action" id="playAllBtn">▶ Reproducir todo</button>
-      </div>
-      <div class="song-list">\${top.map((s,i)=>songRowHtml(s,i)).join("")}</div>
-    </div>
-    <div class="sec">
       <div class="sec-hdr"><div class="sec-title">Volver a escuchar</div></div>
       <div class="album-grid">\${grid.slice(0,6).map((s,i)=>\`
         <div class="album-card" data-song-id="\${s.id}" data-index="\${top.length+i}">
