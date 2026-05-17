@@ -506,6 +506,38 @@ app.get("/api/trending", async (req, res) => {
   }
 });
 
+// GET /api/deezer-chart?genre=X — real Deezer chart tracks for a genre
+const deezerChartCache={};
+const DEEZER_GENRE_IDS={pop:132,reggaeton:144,latina:197,rock:152,"hip-hop":116,electronica:106,indie:113};
+app.get("/api/deezer-chart",async(req,res)=>{
+  const genre=(req.query.genre||"pop").toLowerCase();
+  const cacheKey=genre;
+  if(deezerChartCache[cacheKey]&&Date.now()-deezerChartCache[cacheKey].ts<15*60*1000)
+    return res.json(deezerChartCache[cacheKey].data);
+  try{
+    const gid=DEEZER_GENRE_IDS[genre]||132;
+    const url=`https://api.deezer.com/chart/${gid}/tracks?limit=40`;
+    const r=await fetch(url,{headers:{"User-Agent":USER_AGENT}});
+    if(!r.ok)throw new Error("Deezer chart error");
+    const json=await r.json();
+    const songs=(json.data||[]).map((t,i)=>({
+      id:`dz-chart-${t.id}`,
+      musicaId:null,
+      title:t.title,
+      artistName:t.artist?.name||"",
+      albumCover:t.album?.cover_xl||t.album?.cover_big||t.album?.cover_medium||null,
+      albumTitle:t.album?.title||"",
+      audioUrl:null,
+      genre,
+      duration:t.duration||210,
+      rank:t.rank||i
+    }));
+    const data={songs};
+    deezerChartCache[cacheKey]={data,ts:Date.now()};
+    res.json(data);
+  }catch(e){res.status(500).json({error:e.message});}
+});
+
 // GET /api/artist-photos?names=A,B,C — batch artist photos from Deezer
 app.get("/api/artist-photos", async (req, res) => {
   const names = (req.query.names || "").split(",").map(n => n.trim()).filter(Boolean).slice(0, 14);
@@ -2896,12 +2928,39 @@ function toggleLikeSong(song){
   }
 }
 
+function trackArtistPlay(song){
+  try{
+    const key="pancho_artist_stats";
+    let stats={};try{stats=JSON.parse(localStorage.getItem(key)||"{}");}catch{}
+    const artist=(song.artistName||"").trim();
+    if(artist){stats[artist]=(stats[artist]||0)+1;}
+    const genre=(song.genre||"").trim();
+    const gkey="pancho_genre_stats";
+    let gstats={};try{gstats=JSON.parse(localStorage.getItem(gkey)||"{}");}catch{}
+    if(genre){gstats[genre]=(gstats[genre]||0)+1;}
+    localStorage.setItem(key,JSON.stringify(stats));
+    localStorage.setItem(gkey,JSON.stringify(gstats));
+  }catch{}
+}
+function getTopPlayedArtists(n=5){
+  try{
+    const stats=JSON.parse(localStorage.getItem("pancho_artist_stats")||"{}");
+    return Object.entries(stats).sort((a,b)=>b[1]-a[1]).slice(0,n).map(e=>e[0]);
+  }catch{return[];}
+}
+function getTopPlayedGenres(n=3){
+  try{
+    const stats=JSON.parse(localStorage.getItem("pancho_genre_stats")||"{}");
+    return Object.entries(stats).sort((a,b)=>b[1]-a[1]).slice(0,n).map(e=>e[0]);
+  }catch{return[];}
+}
 function addToRecentlyPlayed(song){
   recentlyPlayed=recentlyPlayed.filter(s=>s.id!=song.id);
   recentlyPlayed.unshift(song);
   if(recentlyPlayed.length>30)recentlyPlayed=recentlyPlayed.slice(0,30);
   LS.set("recent",recentlyPlayed);
   totalPlayed++;
+  trackArtistPlay(song);
   updateProfileStats();
 }
 
@@ -4540,29 +4599,123 @@ function buildParaTiPlaylists(allSongs){
   return _paraTimePlaylists;
 }
 
-async function loadParaTiSongsAsync(container){
-  const allGenres=[...new Set(PARA_TI_DEFS.flatMap(d=>d.genres))];
-  await Promise.all(allGenres.map(g=>fetchGenreForParaTi(g)));
-  const seed=get10MinSeed();
-  _paraTimePlaylists.forEach((pl,i)=>{
-    const pool=pl.genres.flatMap(g=>_paraGenreCache[g]||[]);
-    const deduped=[...new Map(pool.map(s=>[s.id,s])).values()];
-    pl.songs=seededShuffle(deduped,seed+i*137).slice(0,30);
-    // Refresh covers
-    const el=container.querySelector(\`#ptCover\${i}\`);
-    if(el){
-      const withCovers=pl.songs.filter(s=>s.albumCover).slice(0,4);
-      if(withCovers.length>=4){
-        el.className="pt-cover-grid";
-        el.innerHTML=withCovers.map(s=>\`<img src="\${esc(s.albumCover)}" loading="lazy" onerror="this.style.background='rgba(0,0,0,.3)'">\`).join("");
-      }else if(withCovers.length>=1){
-        el.className="pt-cover-icon";el.style.padding="0";
-        el.innerHTML=\`<img src="\${esc(withCovers[0].albumCover)}" style="width:100%;height:100%;object-fit:cover" loading="lazy">\`;
-      }
+// Fetch real Deezer chart songs for a genre
+async function fetchDeezerChart(genre){
+  try{
+    const r=await fetch("/api/deezer-chart?genre="+encodeURIComponent(genre));
+    if(!r.ok)return[];
+    const d=await r.json();
+    return(d.songs||[]).map(s=>({...s,genre}));
+  }catch{return[];}
+}
+
+// Fetch top tracks for a single favorite artist
+async function fetchFavArtistTracks(artist){
+  try{
+    const params=new URLSearchParams();
+    if(artist.id)params.set("deezerId",String(artist.id));
+    params.set("name",artist.name);
+    const r=await fetch("/api/artist-profile?"+params);
+    if(!r.ok)return[];
+    const d=await r.json();
+    return(d.tracks||[]).map(t=>({...t,_fromFav:artist.name}));
+  }catch{return[];}
+}
+
+function ptUpdateCard(container,i,pl){
+  const el=container.querySelector(\`#ptCover\${i}\`);
+  if(el){
+    const withCovers=pl.songs.filter(s=>s.albumCover).slice(0,4);
+    if(withCovers.length>=4){
+      el.className="pt-cover-grid";
+      el.innerHTML=withCovers.map(s=>\`<img src="\${esc(s.albumCover)}" loading="lazy" onerror="this.style.background='rgba(0,0,0,.3)'">\`).join("");
+    }else if(withCovers.length>=1){
+      el.className="pt-cover-icon";el.style.padding="0";
+      el.innerHTML=\`<img src="\${esc(withCovers[0].albumCover)}" style="width:100%;height:100%;object-fit:cover" loading="lazy">\`;
     }
-    // Update song count
-    const countEl=container.querySelector(\`#ptCount\${i}\`);
-    if(countEl) countEl.textContent=pl.songs.length?\`\${pl.songs.length} canciones\`:"";
+  }
+  const countEl=container.querySelector(\`#ptCount\${i}\`);
+  if(countEl)countEl.textContent=pl.songs.length?\`\${pl.songs.length} canciones\`:"";
+}
+
+async function loadParaTiSongsAsync(container){
+  const seed=get10MinSeed();
+
+  // ── 1. "Tu mix de hoy" — real songs from favorite artists ─────────────────
+  const pl0=_paraTimePlaylists[0];
+  if(pl0){
+    let favSongs=[];
+    // Combine favorites + most-played artists
+    const topPlayed=getTopPlayedArtists(5);
+    const favNames=(_favArtists||[]).map(a=>a.name);
+    // Merge: favorites first, then top played, deduplicate names
+    const artistList=[..._favArtists];
+    topPlayed.forEach(name=>{
+      if(!artistList.some(a=>a.name===name))artistList.push({name,id:null,image:null});
+    });
+    if(artistList.length>0){
+      const trackArrays=await Promise.all(artistList.slice(0,6).map(a=>fetchFavArtistTracks(a)));
+      favSongs=trackArrays.flat();
+    }
+    if(favSongs.length>=5){
+      // Shuffle so artist tracks are interleaved
+      pl0.songs=seededShuffle(favSongs,seed).slice(0,30);
+      // Dynamically update the card description
+      const nameStr=favNames.slice(0,3).join(", ")||(topPlayed[0]||"");
+      if(nameStr){
+        const descEl=container.querySelector(\`[data-pt-index="0"] .pt-card-desc\`);
+        if(descEl)descEl.textContent="Basado en: "+nameStr;
+      }
+    } else {
+      // Fall back: genre pool
+      const allG=[...new Set(pl0.genres)];
+      await Promise.all(allG.map(g=>fetchGenreForParaTi(g)));
+      const pool=allG.flatMap(g=>_paraGenreCache[g]||[]);
+      pl0.songs=seededShuffle([...new Map(pool.map(s=>[s.id,s])).values()],seed).slice(0,30);
+    }
+    ptUpdateCard(container,0,pl0);
+  }
+
+  // ── 2. "Descubrimiento" — real Deezer chart songs not yet heard ───────────
+  const pl1=_paraTimePlaylists[1];
+  if(pl1){
+    const playedIds=new Set(recentlyPlayed.map(s=>s.id));
+    const playedTitles=new Set(recentlyPlayed.map(s=>(s.title||"").toLowerCase()));
+    // Pick genres from user's taste or defaults
+    const topGenres=getTopPlayedGenres(3);
+    const discGenres=topGenres.length>=2?topGenres:["pop","electronica","rock"];
+    const chartArrays=await Promise.all(discGenres.map(g=>fetchDeezerChart(g)));
+    let chartSongs=chartArrays.flat();
+    // Filter out already heard songs
+    const fresh=chartSongs.filter(s=>!playedIds.has(s.id)&&!playedTitles.has((s.title||"").toLowerCase()));
+    pl1.songs=seededShuffle(fresh.length>=5?fresh:chartSongs,seed+137).slice(0,30);
+    ptUpdateCard(container,1,pl1);
+  }
+
+  // ── 3–7: Other mixes — real Deezer chart data for their genres ────────────
+  const remainingGenres=[...new Set(_paraTimePlaylists.slice(2).flatMap(p=>p.genres))];
+  // Also load legacy scraper genre cache for mixing in
+  await Promise.all([
+    ...remainingGenres.map(g=>fetchGenreForParaTi(g)),
+    ...remainingGenres.map(g=>fetchDeezerChart(g))
+  ]);
+  // Build a combined pool per genre
+  const combinedGenreCache={};
+  for(const g of remainingGenres){
+    const scraper=_paraGenreCache[g]||[];
+    // For Deezer chart we already fetched above — pull from the endpoint again (cached)
+    let chart=[];
+    try{const r=await fetch("/api/deezer-chart?genre="+g);if(r.ok){const d=await r.json();chart=(d.songs||[]).map(s=>({...s,genre:g}));}}catch{}
+    const merged=[...chart,...scraper];
+    combinedGenreCache[g]=[...new Map(merged.map(s=>[s.title+s.artistName,s])).values()];
+  }
+
+  _paraTimePlaylists.slice(2).forEach((pl,idx)=>{
+    const i=idx+2;
+    const pool=pl.genres.flatMap(g=>combinedGenreCache[g]||_paraGenreCache[g]||[]);
+    const deduped=[...new Map(pool.map(s=>[s.id||s.title+s.artistName,s])).values()];
+    pl.songs=seededShuffle(deduped,seed+i*137).slice(0,30);
+    ptUpdateCard(container,i,pl);
   });
 }
 
