@@ -433,23 +433,32 @@ app.get("/api/dice", async (req, res) => {
   }
 });
 
-// GET /api/trending — top artists' songs
+// GET /api/trending — real charts from all genres
 app.get("/api/trending", async (req, res) => {
   const cached = songCache["__trending__"];
   if (cached && Date.now() - cached.ts < CACHE_TTL) {
-    return res.json({ songs: cached.songs, fromCache: true });
+    return res.json({ songs: cached.songs, byGenre: cached.byGenre, fromCache: true });
   }
-
   try {
-    const [pop, reggaeton] = await Promise.all([
+    const [pop, reggaeton, latina, hiphop, rock, electronica] = await Promise.all([
       getSongsFromPlaylist("pop", 10),
       getSongsFromPlaylist("reggaeton", 10),
+      getSongsFromPlaylist("latina", 10),
+      getSongsFromPlaylist("hip-hop", 10),
+      getSongsFromPlaylist("rock", 10),
+      getSongsFromPlaylist("electronica", 10),
     ]);
-    const songs = [...pop, ...reggaeton].slice(0, 20);
-    songCache["__trending__"] = { songs, ts: Date.now() };
-    res.json({ songs, fromCache: false });
+    const byGenre = { pop, reggaeton, latina, "hip-hop": hiphop, rock, electronica };
+    // Interleave genres so top 10 is diverse
+    const songs = [];
+    const maxLen = Math.max(...Object.values(byGenre).map(a => a.length));
+    for (let i = 0; i < maxLen; i++) {
+      for (const g of Object.values(byGenre)) { if (g[i]) songs.push(g[i]); }
+    }
+    songCache["__trending__"] = { songs, byGenre, ts: Date.now() };
+    res.json({ songs, byGenre, fromCache: false });
   } catch (err) {
-    res.status(500).json({ error: err.message, songs: [] });
+    res.status(500).json({ error: err.message, songs: [], byGenre: {} });
   }
 });
 
@@ -987,6 +996,22 @@ const HTML = `<!DOCTYPE html>
       overflow:hidden;
       backdrop-filter:blur(12px);
     }
+    /* ── Trending page ── */
+    .trend-row{display:flex;align-items:center;gap:12px;padding:10px 16px;cursor:pointer;transition:background .15s;border-radius:12px;}
+    .trend-row:active{background:rgba(255,255,255,.07);}
+    .trend-rank{width:28px;text-align:center;font-size:1rem;font-weight:900;color:rgba(255,255,255,.3);flex-shrink:0;}
+    .trend-rank-top{color:var(--p);}
+    .trend-cover{width:50px;height:50px;border-radius:10px;overflow:hidden;flex-shrink:0;background:rgba(255,255,255,.08);position:relative;}
+    .trend-cover img{width:100%;height:100%;object-fit:cover;}
+    .trend-cover-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.4rem;}
+    .trend-fire{position:absolute;top:-5px;right:-5px;font-size:.75rem;}
+    .trend-info{flex:1;min-width:0;}
+    .trend-title{font-size:.88rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .trend-artist{font-size:.72rem;color:rgba(255,255,255,.5);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .trend-badge{font-size:1rem;flex-shrink:0;width:22px;text-align:center;}
+    .trend-page-hdr{padding:16px 20px 4px;}
+    .trend-page-title{font-size:1.5rem;font-weight:900;letter-spacing:-.04em;}
+    .trend-page-sub{font-size:.78rem;color:rgba(255,255,255,.4);margin-top:3px;}
     .song-row{
       display:flex;align-items:center;gap:13px;
       padding:12px 16px;cursor:pointer;
@@ -2482,7 +2507,7 @@ const HTML = `<!DOCTYPE html>
     <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
     Explorar
   </button>
-  <button class="nav-item" data-genre="trending">
+  <button class="nav-item" data-view="trending">
     <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
     Trending
   </button>
@@ -3621,6 +3646,121 @@ function renderResults(songs, query, artist){
   enrichListCovers(songs);
 }
 
+// ─── Trending page ─────────────────────────────────────────────────────────────
+async function renderTrending(){
+  currentView="trending";
+  renderLoading("Cargando lo más trending...");
+  try{
+    const res=await fetch("/api/trending");
+    const data=await res.json();
+    renderTrendingPage(data.songs||[],data.byGenre||{});
+  }catch(e){renderEmpty("Error al cargar trending: "+e.message);}
+}
+
+function renderTrendingPage(songs,byGenre){
+  const content=document.getElementById("mainContent");
+  const top10=songs.slice(0,10);
+  const GENRE_META={
+    pop:{label:"Pop",icon:"🎵",color:"#ec4899"},
+    reggaeton:{label:"Reggaeton",icon:"🎤",color:"#f59e0b"},
+    latina:{label:"Latina",icon:"💃",color:"#ef4444"},
+    "hip-hop":{label:"Hip-Hop",icon:"🎧",color:"#818cf8"},
+    rock:{label:"Rock",icon:"🎸",color:"#94a3b8"},
+    electronica:{label:"Electrónica",icon:"⚡",color:"#22d3ee"},
+  };
+  content.innerHTML=\`
+    <div class="trend-page-hdr">
+      <div class="trend-page-title">🔥 Trending</div>
+      <div class="trend-page-sub">Lo más escuchado ahora mismo</div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-hdr">
+        <div class="sec-title">Top 10 Global</div>
+        <button class="sec-action" id="trendPlayAll">▶ Reproducir todo</button>
+      </div>
+      <div class="song-list">
+        \${top10.map((s,i)=>\`
+          <div class="trend-row" data-ti="\${i}">
+            <div class="trend-rank \${i<3?"trend-rank-top":""}">\${i+1}</div>
+            <div class="trend-cover">
+              \${s.albumCover?\`<img src="\${esc(s.albumCover)}" loading="lazy" onerror="this.style.display='none'">\`:\`<div class="trend-cover-ph">🎵</div>\`}
+              \${i===0?\`<div class="trend-fire">🔥</div>\`:""}
+            </div>
+            <div class="trend-info">
+              <div class="trend-title">\${esc(s.title)}</div>
+              <div class="trend-artist">\${esc(s.artistName)}</div>
+            </div>
+            <div class="trend-badge">\${i===0?"🏆":i<3?"⭐":""}</div>
+            <button class="row-dots" data-ti="\${i}">⋯</button>
+          </div>
+        \`).join("")}
+      </div>
+    </div>
+
+    \${Object.entries(byGenre).filter(([,s])=>s&&s.length).map(([genre,gs])=>{
+      const meta=GENRE_META[genre]||{label:genre,icon:"🎵",color:"#a855f7"};
+      return \`
+        <div class="sec">
+          <div class="sec-hdr">
+            <div class="sec-title" style="display:flex;align-items:center;gap:8px">
+              <span style="width:28px;height:28px;border-radius:50%;background:\${meta.color}33;display:inline-flex;align-items:center;justify-content:center;font-size:.85rem">\${meta.icon}</span>
+              \${meta.label}
+            </div>
+            <button class="sec-action tg-play-all" data-genre="\${genre}">▶ Reproducir</button>
+          </div>
+          <div class="nov-scroll">
+            \${gs.slice(0,8).map((s,i)=>\`
+              <div class="nov-card tg-card" data-genre="\${genre}" data-ti="\${i}" style="flex-shrink:0;width:140px">
+                <div class="nov-card-cover">
+                  \${s.albumCover?\`<img src="\${esc(s.albumCover)}" loading="lazy" onerror="this.style.display='none'">\`:\`<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:2rem">\${meta.icon}</div>\`}
+                  <div class="nov-card-play">▶</div>
+                </div>
+                <div class="nov-card-title">\${esc(s.title)}</div>
+                <div class="nov-card-sub">\${esc(s.artistName)}</div>
+              </div>
+            \`).join("")}
+          </div>
+        </div>
+      \`;
+    }).join("")}
+    <div style="height:24px"></div>
+  \`;
+
+  // Top 10 clicks
+  content.querySelectorAll(".trend-row").forEach(row=>{
+    const i=parseInt(row.dataset.ti);
+    row.addEventListener("click",()=>playSong(top10[i],top10));
+    row.querySelector(".row-dots")?.addEventListener("click",e=>{
+      e.stopPropagation();openCtxMenu(e,top10[i]);
+    });
+  });
+
+  // Play all top 10
+  content.querySelector("#trendPlayAll")?.addEventListener("click",()=>{
+    if(top10.length) playSong(top10[0],songs);
+  });
+
+  // Genre section cards
+  content.querySelectorAll(".tg-card").forEach(card=>{
+    card.addEventListener("click",()=>{
+      const gs=byGenre[card.dataset.genre]||[];
+      const i=parseInt(card.dataset.ti);
+      if(gs[i]) playSong(gs[i],gs);
+    });
+  });
+
+  // Genre play all
+  content.querySelectorAll(".tg-play-all").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      const gs=byGenre[btn.dataset.genre]||[];
+      if(gs.length) playSong(gs[0],gs);
+    });
+  });
+
+  enrichListCovers(songs);
+}
+
 function renderLibrary(){
   const content=document.getElementById("mainContent");
   if(!likedSongs.length){
@@ -4299,6 +4439,7 @@ function setView(view){
   if(view==="home"){ loadGenre(currentGenre); }
   else if(view==="search"){ renderSearch(); }
   else if(view==="library"){ renderLibrary(); }
+  else if(view==="trending"){ renderTrending(); }
 }
 
 document.querySelectorAll(".sidebar-item[data-view], .nav-item[data-view]").forEach(btn=>{
