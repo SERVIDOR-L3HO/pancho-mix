@@ -1797,8 +1797,9 @@ const HTML = `<!DOCTYPE html>
       .album-grid{grid-template-columns:repeat(2,1fr);}
     }
 
-    #yt-holder{position:fixed;bottom:-2px;left:-2px;width:1px;height:1px;opacity:0;pointer-events:none;z-index:-1;}
-    #yt-anchor{width:100%;height:100%;border:none;}
+    #yt-holder{position:fixed;bottom:-2px;left:-2px;width:1px;height:1px;opacity:0;pointer-events:none;z-index:401;border-radius:16px;overflow:hidden;transition:none;}
+    #yt-holder.video-visible{opacity:1;pointer-events:auto;bottom:auto;left:auto;}
+    #yt-anchor{width:100%;height:100%;border:none;display:block;background:#000;}
 
     /* ══ FULL PLAYER ══════════════════════════════════════════════════════ */
     .full-player{
@@ -2789,7 +2790,10 @@ function closeFullPlayer(){
   fullPlayerOpen=false;
   document.getElementById("fullPlayer").classList.remove("open");
   document.body.style.overflow="";
-  if(playerMode==="video") returnVideoToHolder();
+  // Hide the video overlay when full player closes
+  const holder=document.getElementById("yt-holder");
+  holder.classList.remove("video-visible");
+  holder.style.cssText="position:fixed;bottom:-2px;left:-2px;width:1px;height:1px;opacity:0;pointer-events:none;";
 }
 
 function updateFullPlayer(){
@@ -2844,37 +2848,41 @@ function renderQueueList(){
 }
 
 // ─── Video mode ───────────────────────────────────────────────────────────────
+// The YouTube iframe NEVER moves in the DOM — moving it causes a reload/error.
+// Instead we reposition #yt-holder with CSS to overlay #fpVideoWrap visually.
 function setPlayerMode(mode){
   playerMode=mode;
   document.getElementById("fpModeAudio").classList.toggle("active",mode==="audio");
   document.getElementById("fpModeVideo").classList.toggle("active",mode==="video");
   const artEl=document.getElementById("fpArt");
   const videoWrap=document.getElementById("fpVideoWrap");
+  const holder=document.getElementById("yt-holder");
   if(mode==="video"){
     artEl.style.display="none";
     videoWrap.style.display="block";
-    if(ytPlayer&&ytReady){
+    // Wait a frame for fpVideoWrap to paint, then overlay yt-holder on top of it
+    requestAnimationFrame(()=>{
+      const rect=videoWrap.getBoundingClientRect();
+      holder.classList.add("video-visible");
+      holder.style.top=rect.top+"px";
+      holder.style.left=rect.left+"px";
+      holder.style.width=rect.width+"px";
+      holder.style.height=rect.height+"px";
       try{
-        const iframe=ytPlayer.getIframe();
-        iframe.style.cssText="width:100%;height:100%;border:none;";
-        videoWrap.innerHTML=""; videoWrap.appendChild(iframe);
+        const iframe=ytPlayer?.getIframe();
+        if(iframe) iframe.style.cssText="width:100%;height:100%;border:none;background:#000;";
       }catch(e){}
-    }
+    });
   } else {
     artEl.style.display="";
     videoWrap.style.display="none";
-    returnVideoToHolder();
+    holder.classList.remove("video-visible");
+    holder.style.cssText="position:fixed;bottom:-2px;left:-2px;width:1px;height:1px;opacity:0;pointer-events:none;";
   }
 }
 
 function returnVideoToHolder(){
-  if(!ytPlayer||!ytReady)return;
-  try{
-    const iframe=ytPlayer.getIframe();
-    const holder=document.getElementById("yt-holder");
-    iframe.style.cssText="width:1px;height:1px;opacity:0;pointer-events:none;border:none;";
-    if(!holder.contains(iframe))holder.appendChild(iframe);
-  }catch(e){}
+  // No-op: iframe always stays inside #yt-holder — never moved in the DOM
 }
 
 async function playSong(song,newQueue){
