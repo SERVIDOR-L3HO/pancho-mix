@@ -1297,6 +1297,60 @@ const HTML = `<!DOCTYPE html>
     .eq-bars span:nth-child(3){height:7px;animation-delay:.25s;}
     @keyframes eq{0%{transform:scaleY(.3);}100%{transform:scaleY(1);}}
 
+    /* ── ARTISTAS FAVORITOS ── */
+    .fav-artists-sec{margin-bottom:28px;}
+    .fav-artists-scroll{display:flex;gap:18px;overflow-x:auto;padding:4px 0 12px;scrollbar-width:none;}
+    .fav-artists-scroll::-webkit-scrollbar{display:none;}
+    .fav-artist-item{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:9px;cursor:pointer;width:80px;}
+    .fav-artist-circle{
+      width:76px;height:76px;border-radius:50%;overflow:hidden;
+      background:var(--glass);border:2.5px solid var(--border2);
+      display:flex;align-items:center;justify-content:center;
+      font-size:1.7rem;transition:transform .2s,box-shadow .2s;
+      box-shadow:0 4px 18px rgba(0,0,0,.45);
+    }
+    .fav-artist-item:hover .fav-artist-circle{transform:scale(1.08);box-shadow:0 8px 28px rgba(139,92,246,.45);}
+    .fav-artist-circle img{width:100%;height:100%;object-fit:cover;}
+    .fav-artist-name{font-size:.68rem;font-weight:600;color:rgba(255,255,255,.85);text-align:center;line-height:1.2;max-width:80px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+    .fav-add-btn{
+      flex-shrink:0;width:76px;height:76px;border-radius:50%;
+      background:var(--glass);border:2px dashed var(--border2);
+      display:flex;align-items:center;justify-content:center;
+      font-size:1.6rem;cursor:pointer;color:var(--muted);
+      transition:all .2s;
+    }
+    .fav-add-btn:hover{background:rgba(139,92,246,.18);border-color:#a78bfa;color:#a78bfa;}
+    /* modal */
+    .fav-modal-overlay{
+      position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.72);
+      display:flex;align-items:flex-end;justify-content:center;
+      opacity:0;pointer-events:none;transition:opacity .22s;
+    }
+    .fav-modal-overlay.open{opacity:1;pointer-events:all;}
+    .fav-modal{
+      width:100%;max-width:480px;background:#18182a;border-radius:24px 24px 0 0;
+      padding:24px 20px 32px;transform:translateY(30px);transition:transform .25s;
+    }
+    .fav-modal-overlay.open .fav-modal{transform:translateY(0);}
+    .fav-modal-title{font-size:1rem;font-weight:700;margin-bottom:14px;}
+    .fav-modal-search{
+      width:100%;padding:10px 14px;border-radius:50px;
+      background:var(--glass);border:1px solid var(--border2);
+      color:#fff;font-size:.9rem;outline:none;box-sizing:border-box;margin-bottom:14px;
+    }
+    .fav-modal-results{display:flex;flex-direction:column;gap:8px;max-height:280px;overflow-y:auto;}
+    .fav-modal-results::-webkit-scrollbar{display:none;}
+    .fav-result-row{
+      display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:12px;
+      cursor:pointer;transition:background .15s;
+    }
+    .fav-result-row:hover{background:var(--glass);}
+    .fav-result-avatar{width:44px;height:44px;border-radius:50%;overflow:hidden;background:var(--glass);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.2rem;}
+    .fav-result-avatar img{width:100%;height:100%;object-fit:cover;}
+    .fav-result-name{font-size:.88rem;font-weight:600;flex:1;}
+    .fav-result-check{font-size:1.1rem;color:#a78bfa;}
+    .fav-empty-hint{color:var(--muted);font-size:.8rem;text-align:center;padding:18px 0;}
+
     /* ── ALBUM GRID (Volver a escuchar) ── */
     .album-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
     .album-card{
@@ -3652,6 +3706,18 @@ function renderHome(songs, gridSongs){
         \`).join("")}
       </div>
     </div>
+    <div class="sec fav-artists-sec" id="favArtistsSec">
+      <div class="sec-hdr">
+        <div class="sec-title">Tus artistas favoritos</div>
+        <button class="sec-action" id="openFavModalBtn" style="display:flex;align-items:center;gap:5px;font-size:.78rem;">+ Agregar</button>
+      </div>
+      <div class="fav-artists-scroll" id="favArtistsScroll">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:9px;">
+          <div class="fav-add-btn" id="favAddCircleBtn">＋</div>
+          <span class="fav-artist-name" style="color:var(--muted)">Agregar</span>
+        </div>
+      </div>
+    </div>
     <div class="sec">
       <div class="sec-hdr">
         <div class="sec-title">Volver a escuchar</div>
@@ -3721,6 +3787,13 @@ function renderHome(songs, gridSongs){
 
   const diceBtnInline=content.querySelector("#diceBtn");
   if(diceBtnInline)diceBtnInline.addEventListener("click",()=>playDiceSong());
+
+  // ── Artistas favoritos ──────────────────────────────────────────────────
+  renderFavArtists();
+  const openFavModalBtn=content.querySelector("#openFavModalBtn");
+  const favAddCircleBtn=content.querySelector("#favAddCircleBtn");
+  if(openFavModalBtn)openFavModalBtn.addEventListener("click",openFavModal);
+  if(favAddCircleBtn)favAddCircleBtn.addEventListener("click",openFavModal);
 
   content.querySelectorAll(".pt-card").forEach(card=>{
     const i=parseInt(card.dataset.ptIndex);
@@ -4915,6 +4988,175 @@ document.getElementById("fpModeAudio").classList.toggle("active", playerMode==="
 document.getElementById("fpModeVideo").classList.toggle("active", playerMode==="video");
 updateProfileStats();
 setView("home");
+
+// ── ARTISTAS FAVORITOS ─────────────────────────────────────────────────────
+const FAV_ARTISTS_KEY="pancho_fav_artists";
+let _favArtists=[];
+try{_favArtists=JSON.parse(localStorage.getItem(FAV_ARTISTS_KEY)||"[]");}catch{_favArtists=[];}
+
+function saveFavArtists(){localStorage.setItem(FAV_ARTISTS_KEY,JSON.stringify(_favArtists));}
+
+function renderFavArtists(){
+  const scroll=document.getElementById("favArtistsScroll");
+  if(!scroll)return;
+  const addBtn=\`<div style="display:flex;flex-direction:column;align-items:center;gap:9px;">
+    <div class="fav-add-btn" id="favAddCircleBtn">＋</div>
+    <span class="fav-artist-name" style="color:var(--muted)">Agregar</span>
+  </div>\`;
+  if(!_favArtists.length){
+    scroll.innerHTML=addBtn;
+    const btn=scroll.querySelector("#favAddCircleBtn");
+    if(btn)btn.addEventListener("click",openFavModal);
+    return;
+  }
+  scroll.innerHTML=_favArtists.map(a=>\`
+    <div class="fav-artist-item" data-fav-name="\${esc(a.name)}">
+      <div class="fav-artist-circle">
+        \${a.image?\`<img src="\${esc(a.image)}" loading="lazy" onerror="this.style.display='none'">\`:\`🎤\`}
+      </div>
+      <div class="fav-artist-name">\${esc(a.name)}</div>
+    </div>
+  \`).join("")+addBtn;
+  scroll.querySelectorAll(".fav-artist-item").forEach(item=>{
+    item.addEventListener("click",()=>{
+      const name=item.dataset.favName;
+      const a=_favArtists.find(x=>x.name===name);
+      if(a){
+        const params=new URLSearchParams();
+        if(a.id)params.set("deezerId",a.id);
+        params.set("name",a.name);
+        fetch("/api/artist-profile?"+params).then(r=>r.json()).then(data=>{
+          if(data&&data.songs&&data.songs.length){
+            renderArtistPage(data.artist||{name:a.name,image:a.image,id:a.id},data.songs);
+          } else {showToast("Sin canciones disponibles");}
+        }).catch(()=>showToast("Error al cargar artista"));
+      }
+    });
+  });
+  const circleAdd=scroll.querySelector("#favAddCircleBtn");
+  if(circleAdd)circleAdd.addEventListener("click",openFavModal);
+}
+
+// ── Modal ──────────────────────────────────────────────────────────────────
+let _favModalSearchTimer=null;
+let _favModalResults=[];
+
+function openFavModal(){
+  const overlay=document.getElementById("favModalOverlay");
+  if(!overlay)return;
+  overlay.classList.add("open");
+  const input=overlay.querySelector("#favModalInput");
+  if(input){input.value="";input.focus();}
+  renderFavModalResults([]);
+  renderFavModalSelected();
+}
+
+function closeFavModal(){
+  const overlay=document.getElementById("favModalOverlay");
+  if(overlay)overlay.classList.remove("open");
+}
+
+function renderFavModalSelected(){
+  const el=document.getElementById("favModalSelected");
+  if(!el)return;
+  if(!_favArtists.length){el.innerHTML="";return;}
+  el.innerHTML=\`<div style="font-size:.75rem;color:var(--muted);margin-bottom:8px;font-weight:600">Tus artistas (\${_favArtists.length})</div>\`+
+    _favArtists.map(a=>\`
+      <div class="fav-result-row" style="justify-content:space-between;">
+        <div class="fav-result-avatar">
+          \${a.image?\`<img src="\${esc(a.image)}" onerror="this.style.display='none'">\`:\`🎤\`}
+        </div>
+        <span class="fav-result-name">\${esc(a.name)}</span>
+        <span class="fav-result-check" style="cursor:pointer;color:#f87171;" data-remove-fav="\${esc(a.name)}" title="Quitar">✕</span>
+      </div>
+    \`).join("");
+  el.querySelectorAll("[data-remove-fav]").forEach(btn=>{
+    btn.addEventListener("click",e=>{
+      e.stopPropagation();
+      const name=btn.dataset.removeFav;
+      _favArtists=_favArtists.filter(x=>x.name!==name);
+      saveFavArtists();
+      renderFavArtists();
+      renderFavModalSelected();
+    });
+  });
+}
+
+function renderFavModalResults(results){
+  const el=document.getElementById("favModalResults");
+  if(!el)return;
+  if(!results.length){
+    el.innerHTML=\`<div class="fav-empty-hint">Busca artistas para agregar</div>\`;
+    return;
+  }
+  el.innerHTML=results.map(a=>{
+    const added=_favArtists.some(x=>x.name===a.name||x.id===a.id);
+    return \`<div class="fav-result-row" data-modal-artist='\${JSON.stringify({name:a.name,image:a.image||"",id:a.id||""}).replace(/'/g,"&apos;")}'>
+      <div class="fav-result-avatar">
+        \${a.image?\`<img src="\${esc(a.image)}" onerror="this.style.display='none'">\`:\`🎤\`}
+      </div>
+      <span class="fav-result-name">\${esc(a.name)}</span>
+      \${added?\`<span class="fav-result-check">✓</span>\`:\`<span style="font-size:.8rem;color:#a78bfa;font-weight:700">+ Agregar</span>\`}
+    </div>\`;
+  }).join("");
+  el.querySelectorAll("[data-modal-artist]").forEach(row=>{
+    row.addEventListener("click",()=>{
+      let artist;
+      try{artist=JSON.parse(row.dataset.modalArtist);}catch{return;}
+      const already=_favArtists.some(x=>x.name===artist.name||x.id===artist.id);
+      if(already){
+        _favArtists=_favArtists.filter(x=>x.name!==artist.name&&x.id!==artist.id);
+        showToast("Artista eliminado");
+      } else {
+        _favArtists.push(artist);
+        showToast("✓ Artista agregado");
+      }
+      saveFavArtists();
+      renderFavArtists();
+      renderFavModalSelected();
+      renderFavModalResults(_favModalResults);
+    });
+  });
+}
+
+document.addEventListener("DOMContentLoaded",()=>{});
+
+// Inject modal into DOM once
+(function injectFavModal(){
+  if(document.getElementById("favModalOverlay"))return;
+  const el=document.createElement("div");
+  el.className="fav-modal-overlay";
+  el.id="favModalOverlay";
+  el.innerHTML=\`
+    <div class="fav-modal">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div class="fav-modal-title">Tus artistas favoritos</div>
+        <button id="favModalCloseBtn" style="background:none;border:none;color:var(--muted);font-size:1.3rem;cursor:pointer;line-height:1;">✕</button>
+      </div>
+      <input class="fav-modal-search" id="favModalInput" type="text" placeholder="Buscar artista…" autocomplete="off">
+      <div class="fav-modal-results" id="favModalResults"><div class="fav-empty-hint">Busca artistas para agregar</div></div>
+      <div id="favModalSelected" style="margin-top:14px;"></div>
+    </div>
+  \`;
+  document.body.appendChild(el);
+  el.addEventListener("click",e=>{if(e.target===el)closeFavModal();});
+  el.querySelector("#favModalCloseBtn").addEventListener("click",closeFavModal);
+  el.querySelector("#favModalInput").addEventListener("input",function(){
+    const q=this.value.trim();
+    clearTimeout(_favModalSearchTimer);
+    if(q.length<2){renderFavModalResults([]);return;}
+    _favModalSearchTimer=setTimeout(async()=>{
+      const resultsEl=document.getElementById("favModalResults");
+      if(resultsEl)resultsEl.innerHTML=\`<div class="fav-empty-hint">Buscando…</div>\`;
+      try{
+        const res=await fetch("/api/artist-photos?names="+encodeURIComponent(q));
+        const data=await res.json();
+        _favModalResults=data.artists||[];
+        renderFavModalResults(_favModalResults);
+      }catch{renderFavModalResults([]);}
+    },420);
+  });
+})();
 </script>
 </body>
 </html>`;
