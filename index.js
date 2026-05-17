@@ -1245,23 +1245,36 @@ const HTML = `<!DOCTYPE html>
     .dice-fab{
       position:fixed;
       bottom:calc(var(--player-h,80px) + 18px);
-      right:18px;
+      right:16px;
       z-index:900;
-      width:56px;height:56px;border-radius:18px;
-      background:linear-gradient(145deg,#a855f7,#7c3aed);
-      border:1.5px solid rgba(255,255,255,.22);
-      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
-      font-size:1.35rem;cursor:pointer;line-height:1;
-      box-shadow:0 8px 32px rgba(168,85,247,.5),0 2px 8px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.18);
-      transition:transform .18s,box-shadow .18s;
-      user-select:none;
+      width:62px;height:62px;border-radius:22px;
+      background:rgba(120,60,220,0.28);
+      backdrop-filter:blur(22px) saturate(1.8);
+      -webkit-backdrop-filter:blur(22px) saturate(1.8);
+      border:1.5px solid rgba(180,130,255,.45);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+      font-size:1.5rem;cursor:pointer;line-height:1;
+      box-shadow:0 0 0 1px rgba(120,60,220,.18),0 8px 32px rgba(120,60,220,.45),0 2px 8px rgba(0,0,0,.5),inset 0 1.5px 0 rgba(255,255,255,.22);
+      transition:transform .2s cubic-bezier(.34,1.56,.64,1),box-shadow .2s;
+      user-select:none;overflow:hidden;
+    }
+    .dice-fab::before{
+      content:'';position:absolute;inset:0;border-radius:inherit;
+      background:linear-gradient(145deg,rgba(200,150,255,.18) 0%,rgba(100,50,200,.06) 100%);
+      pointer-events:none;
+    }
+    .dice-fab::after{
+      content:'';position:absolute;top:-30px;left:-10px;width:80px;height:40px;
+      background:rgba(200,160,255,.12);border-radius:50%;
+      filter:blur(12px);pointer-events:none;
     }
     .dice-fab:hover{
-      transform:translateY(-3px) scale(1.06);
-      box-shadow:0 14px 44px rgba(168,85,247,.65),0 4px 12px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.18);
+      transform:translateY(-4px) scale(1.08);
+      box-shadow:0 0 0 2px rgba(180,120,255,.4),0 16px 48px rgba(140,70,255,.6),0 4px 14px rgba(0,0,0,.55),inset 0 1.5px 0 rgba(255,255,255,.28);
+      border-color:rgba(200,160,255,.7);
     }
     .dice-fab:active{transform:scale(.92);}
-    .dice-fab-label{font-size:.48rem;font-weight:800;color:rgba(255,255,255,.75);letter-spacing:.08em;text-transform:uppercase;}
+    .dice-fab-label{font-size:.44rem;font-weight:900;color:rgba(220,190,255,.9);letter-spacing:.12em;text-transform:uppercase;position:relative;z-index:1;}
     .dice-fab.rolling{animation:diceRoll .45s cubic-bezier(.36,.07,.19,.97);}
     .dice-fab.loading{pointer-events:none;opacity:.8;}
     .dice-fab.loading .dice-emoji{animation:diceSpin .6s linear infinite;}
@@ -1466,6 +1479,55 @@ const HTML = `<!DOCTYPE html>
     .hcard-img-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:2.2rem;}
     .hcard-title{font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
     .hcard-sub{font-size:.72rem;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+    /* ── RECENTLY PLAYED GRID (YouTube Music style) ── */
+    .rp-grid-wrap{overflow-x:auto;padding-bottom:6px;}
+    .rp-grid-wrap::-webkit-scrollbar{display:none;}
+    .rp-grid{
+      display:grid;
+      grid-template-rows:repeat(2,1fr);
+      grid-auto-flow:column;
+      gap:10px;
+      width:max-content;
+    }
+    .rp-card{
+      width:148px;cursor:pointer;
+      border-radius:14px;overflow:hidden;
+      background:var(--glass);
+      border:1px solid var(--border);
+      position:relative;
+      transition:transform .2s cubic-bezier(.34,1.56,.64,1),box-shadow .2s;
+      box-shadow:0 4px 18px rgba(0,0,0,.35);
+    }
+    .rp-card:hover{transform:scale(1.04);box-shadow:0 10px 32px rgba(0,0,0,.5);}
+    .rp-card:active{transform:scale(.96);}
+    .rp-card-img{
+      width:148px;height:148px;position:relative;overflow:hidden;
+      background:var(--bg3);
+    }
+    .rp-card-img img{width:100%;height:100%;object-fit:cover;display:block;}
+    .rp-card-img-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:2.8rem;background:var(--bg3);}
+    .rp-card-overlay{
+      position:absolute;inset:0;
+      background:linear-gradient(to top,rgba(0,0,0,.72) 0%,rgba(0,0,0,.08) 55%,transparent 100%);
+      pointer-events:none;
+    }
+    .rp-card-info{
+      position:absolute;bottom:0;left:0;right:0;
+      padding:8px 9px;
+    }
+    .rp-card-title{font-size:.76rem;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 4px rgba(0,0,0,.7);}
+    .rp-card-artist{font-size:.64rem;color:rgba(255,255,255,.7);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .rp-card-play{
+      position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);
+      width:38px;height:38px;border-radius:50%;
+      background:rgba(255,255,255,.2);backdrop-filter:blur(8px);
+      border:1.5px solid rgba(255,255,255,.4);
+      display:flex;align-items:center;justify-content:center;
+      font-size:.95rem;color:#fff;
+      transition:transform .18s cubic-bezier(.34,1.56,.64,1);
+    }
+    .rp-card:hover .rp-card-play{transform:translate(-50%,-50%) scale(1);}
 
     /* ── MINI PLAYER ── */
     .mini-player{
@@ -3766,15 +3828,23 @@ function renderHome(songs, gridSongs){
   const recentHtml=recentlyPlayed.length>0?\`
     <div class="sec">
       <div class="sec-hdr"><div class="sec-title">Escuchado recientemente</div></div>
-      <div class="hscroll">\${recentlyPlayed.slice(0,8).map((s,i)=>\`
-        <div class="hcard" data-recent-index="\${i}">
-          <div class="hcard-img">
-            \${s.albumCover?\`<img src="\${esc(s.albumCover)}" loading="lazy" onerror="this.style.display='none'">\`:\`<div class="hcard-img-ph">🎵</div>\`}
+      <div class="rp-grid-wrap">
+        <div class="rp-grid">\${recentlyPlayed.slice(0,12).map((s,i)=>\`
+          <div class="rp-card" data-rp-index="\${i}">
+            <div class="rp-card-img">
+              \${s.albumCover
+                ?\`<img src="\${esc(s.albumCover)}" loading="lazy" onerror="this.style.display='none'">\`
+                :\`<div class="rp-card-img-ph">🎵</div>\`}
+              <div class="rp-card-overlay"></div>
+              <div class="rp-card-play">▶</div>
+            </div>
+            <div class="rp-card-info">
+              <div class="rp-card-title">\${esc(s.title)}</div>
+              <div class="rp-card-artist">\${esc(s.artistName)}</div>
+            </div>
           </div>
-          <div class="hcard-title">\${esc(s.title)}</div>
-          <div class="hcard-sub">\${esc(s.artistName)}</div>
-        </div>
-      \`).join("")}</div>
+        \`).join("")}</div>
+      </div>
     </div>\`:"";
 
   const paraTiPlaylists=buildParaTiPlaylists(songs);
@@ -3872,10 +3942,12 @@ function renderHome(songs, gridSongs){
       card.addEventListener("click",()=>playSong(grid[i],grid));
     }
   });
-  // Volver a escuchar — real listen history
+  // Volver a escuchar — real listen history (capture songs at render time to avoid index shift bug)
+  const _volverSnap=[...recentlyPlayed];
   content.querySelectorAll(".hcard[data-volver-index]").forEach(card=>{
     const i=parseInt(card.dataset.volverIndex);
-    card.addEventListener("click",()=>playSong(recentlyPlayed[i],recentlyPlayed));
+    const song=_volverSnap[i];
+    if(song) card.addEventListener("click",()=>playSong(song,_volverSnap));
   });
   content.querySelectorAll(".hcard[data-volver-grid]").forEach(card=>{
     const i=parseInt(card.dataset.volverGrid);
@@ -3887,8 +3959,12 @@ function renderHome(songs, gridSongs){
     loadNovAlbums(content.querySelector("#novAlbumsScroll"),true);
   });
 
-  content.querySelectorAll(".hcard[data-recent-index]").forEach(card=>{
-    card.addEventListener("click",()=>{const i=parseInt(card.dataset["recentIndex"]);playSong(recentlyPlayed[i],recentlyPlayed);});
+  // Escuchado recientemente grid — capture snapshot at render time (fixes wrong-song-plays bug)
+  const _recentSnap=[...recentlyPlayed];
+  content.querySelectorAll(".rp-card[data-rp-index]").forEach(card=>{
+    const i=parseInt(card.dataset.rpIndex);
+    const song=_recentSnap[i];
+    if(song) card.addEventListener("click",()=>playSong(song,_recentSnap));
   });
   content.querySelectorAll(".chip").forEach(chip=>{
     chip.addEventListener("click",()=>loadGenre(chip.dataset.genre));
