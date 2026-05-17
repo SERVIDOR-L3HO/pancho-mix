@@ -332,6 +332,82 @@ app.get("/api/songs", async (req, res) => {
   }
 });
 
+// GET /api/albums — random famous albums from Deezer chart
+const albumsCache = { data: null, ts: 0 };
+app.get("/api/albums", async (req, res) => {
+  try {
+    if (albumsCache.data && Date.now() - albumsCache.ts < 60 * 60 * 1000) {
+      const shuffled = [...albumsCache.data].sort(() => Math.random() - 0.5);
+      return res.json({ albums: shuffled.slice(0, 20) });
+    }
+    // Pull from multiple Deezer chart genres for variety
+    const urls = [
+      "https://api.deezer.com/chart/0/albums?limit=50",
+      "https://api.deezer.com/chart/116/albums?limit=25",  // Latin
+      "https://api.deezer.com/chart/132/albums?limit=25",  // Hip-hop
+    ];
+    const results = await Promise.allSettled(
+      urls.map(u => fetch(u, { headers: { "User-Agent": USER_AGENT } }).then(r => r.json()))
+    );
+    const seen = new Set();
+    const albums = [];
+    for (const r of results) {
+      if (r.status !== "fulfilled") continue;
+      for (const a of (r.value.data || [])) {
+        if (!a || !a.title || seen.has(a.id)) continue;
+        seen.add(a.id);
+        albums.push({
+          id: a.id,
+          title: a.title,
+          artist: a.artist?.name || "",
+          cover: a.cover_xl || a.cover_big || a.cover_medium || null,
+          fans: a.fans || 0,
+          releaseDate: a.release_date || "",
+          tracksTotal: a.nb_tracks || 0,
+        });
+      }
+    }
+    albumsCache.data = albums;
+    albumsCache.ts = Date.now();
+    const shuffled = [...albums].sort(() => Math.random() - 0.5);
+    res.json({ albums: shuffled.slice(0, 20) });
+  } catch (err) {
+    res.status(500).json({ error: err.message, albums: [] });
+  }
+});
+
+// GET /api/album-tracks?id=X — fetch tracks for a Deezer album
+app.get("/api/album-tracks", async (req, res) => {
+  const id = parseInt(req.query.id);
+  if (!id) return res.status(400).json({ error: "id required", tracks: [] });
+  try {
+    const r = await fetch(`https://api.deezer.com/album/${id}/tracks?limit=30`, {
+      headers: { "User-Agent": USER_AGENT }
+    });
+    const data = await r.json();
+    const albumR = await fetch(`https://api.deezer.com/album/${id}`, {
+      headers: { "User-Agent": USER_AGENT }
+    });
+    const albumData = await albumR.json();
+    const cover = albumData.cover_xl || albumData.cover_big || albumData.cover_medium || null;
+    const tracks = (data.data || []).map((t, i) => ({
+      id: `dz-alb-${t.id}`,
+      musicaId: null,
+      title: t.title,
+      artistName: t.artist?.name || albumData.artist?.name || "",
+      albumCover: cover,
+      albumTitle: albumData.title || "",
+      audioUrl: null,
+      genre: "pop",
+      duration: t.duration || 210,
+      position: i + 1,
+    }));
+    res.json({ tracks, cover, title: albumData.title || "", artist: albumData.artist?.name || "" });
+  } catch (err) {
+    res.status(500).json({ error: err.message, tracks: [] });
+  }
+});
+
 // GET /api/dice — truly random songs from a random genre
 app.get("/api/dice", async (req, res) => {
   const ALL_DICE_GENRES = [
@@ -783,6 +859,64 @@ const HTML = `<!DOCTYPE html>
       margin-top:8px;padding:3px 10px;border-radius:50px;
       background:rgba(255,255,255,.15);backdrop-filter:blur(8px);
       font-size:.68rem;font-weight:700;color:#fff;letter-spacing:.03em;text-transform:uppercase;
+    }
+
+    /* ── NOVEDADES ALBUMS ── */
+    .nov-scroll{display:flex;gap:14px;overflow-x:auto;padding:0 0 12px;scrollbar-width:none;}
+    .nov-scroll::-webkit-scrollbar{display:none;}
+    .nov-alb-card{
+      flex-shrink:0;width:160px;cursor:pointer;
+      transition:transform .2s;
+    }
+    .nov-alb-card:hover{transform:translateY(-4px);}
+    .nov-alb-card:active{transform:scale(.95);}
+    .nov-alb-cover{
+      width:160px;height:160px;border-radius:14px;overflow:hidden;
+      position:relative;flex-shrink:0;
+      background:linear-gradient(135deg,rgba(168,85,247,.25),rgba(99,102,241,.25));
+      box-shadow:0 6px 24px rgba(0,0,0,.45);margin-bottom:10px;
+    }
+    .nov-alb-cover img{width:100%;height:100%;object-fit:cover;display:block;}
+    .nov-alb-cover-ph{
+      position:absolute;inset:0;display:flex;align-items:center;
+      justify-content:center;font-size:3.5rem;
+    }
+    .nov-alb-play{
+      position:absolute;bottom:8px;right:8px;
+      width:34px;height:34px;border-radius:50%;
+      background:rgba(255,255,255,.92);
+      display:flex;align-items:center;justify-content:center;
+      opacity:0;transform:translateY(4px);
+      transition:opacity .18s,transform .18s;
+      box-shadow:0 4px 14px rgba(0,0,0,.4);
+    }
+    .nov-alb-card:hover .nov-alb-play{opacity:1;transform:translateY(0);}
+    .nov-alb-name{
+      font-size:.84rem;font-weight:700;color:#fff;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    }
+    .nov-alb-artist{
+      font-size:.72rem;color:var(--muted);margin-top:2px;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    }
+    .nov-alb-meta{
+      font-size:.66rem;color:rgba(255,255,255,.3);margin-top:2px;
+    }
+    .nov-alb-skel{
+      flex-shrink:0;width:160px;
+    }
+    .nov-alb-skel-cover{
+      width:160px;height:160px;border-radius:14px;margin-bottom:10px;
+      background:linear-gradient(90deg,rgba(255,255,255,.04) 0%,rgba(255,255,255,.09) 50%,rgba(255,255,255,.04) 100%);
+      background-size:200% 100%;
+      animation:skelShimmer 1.4s infinite;
+    }
+    .nov-alb-skel-line{height:11px;border-radius:6px;margin-bottom:6px;
+      background:rgba(255,255,255,.06);animation:skelShimmer 1.4s infinite;}
+    .nov-alb-skel-line:last-child{width:65%;}
+    @keyframes skelShimmer{
+      0%{background-position:200% 0;}
+      100%{background-position:-200% 0;}
     }
 
     /* ── DICE FAB ── */
@@ -3048,16 +3182,18 @@ function renderHome(songs, gridSongs){
     </div>
     <div class="sec" style="padding-bottom:24px">
       <div class="sec-hdr">
-        <div class="sec-title">Novedades</div>
-        <button class="sec-action" id="shuffleAllBtn">🔀 Aleatorio</button>
+        <div class="sec-title">Álbumes</div>
+        <button class="sec-action" id="refreshAlbumsBtn" style="display:flex;align-items:center;gap:5px">↺ Actualizar</button>
       </div>
-      <div class="hscroll">\${horiz.map((s,i)=>\`
-        <div class="hcard" data-song-id="\${s.id}" data-index="\${i}">
-          <div class="hcard-img">\${s.albumCover?\`<img src="\${esc(s.albumCover)}" loading="lazy" onerror="this.style.display='none'">\`:\`<div class="hcard-img-ph">🎵</div>\`}</div>
-          <div class="hcard-title">\${esc(s.title)}</div>
-          <div class="hcard-sub">\${esc(s.artistName)}</div>
-        </div>
-      \`).join("")}</div>
+      <div class="nov-scroll" id="novAlbumsScroll">
+        \${Array.from({length:8}).map(()=>\`
+          <div class="nov-alb-skel">
+            <div class="nov-alb-skel-cover"></div>
+            <div class="nov-alb-skel-line" style="width:80%"></div>
+            <div class="nov-alb-skel-line"></div>
+          </div>
+        \`).join("")}
+      </div>
     </div>
   \`;
 
@@ -3068,6 +3204,12 @@ function renderHome(songs, gridSongs){
   content.querySelectorAll(".album-card").forEach(card=>{
     card.addEventListener("click",()=>{const i=parseInt(card.dataset.index)-top.length;playSong(grid[i],grid);});
   });
+  const refreshAlbumsBtn=content.querySelector("#refreshAlbumsBtn");
+  if(refreshAlbumsBtn)refreshAlbumsBtn.addEventListener("click",()=>{
+    albumsCache2=null;
+    loadNovAlbums(content.querySelector("#novAlbumsScroll"),true);
+  });
+
   content.querySelectorAll(".hcard[data-index]").forEach(card=>{
     card.addEventListener("click",()=>{const i=parseInt(card.dataset.index);playSong(horiz[i],horiz);});
   });
@@ -3107,6 +3249,7 @@ function renderHome(songs, gridSongs){
   });
 
   loadParaTiCovers(paraTiPlaylists,content);
+  loadNovAlbums(content.querySelector("#novAlbumsScroll"));
 
   highlightRows();
   enrichListCovers(songs);
@@ -3408,6 +3551,96 @@ async function doSearch(q){
 
 function syncChips(genre){
   document.querySelectorAll(".chip").forEach(c=>c.classList.toggle("active",c.dataset.genre===genre));
+}
+
+// ─── Novedades Albums ──────────────────────────────────────────────────────────
+let albumsCache2=null;
+
+async function loadNovAlbums(container,force){
+  if(!container)return;
+  try{
+    if(!albumsCache2||force){
+      const res=await fetch("/api/albums");
+      const data=await res.json();
+      albumsCache2=data.albums||[];
+    }
+    renderNovAlbums(container,albumsCache2);
+  }catch{
+    if(container)container.innerHTML=\`<div style="color:var(--muted);font-size:.8rem;padding:8px">No se pudieron cargar los álbumes</div>\`;
+  }
+}
+
+function renderNovAlbums(container,albums){
+  if(!container||!albums.length)return;
+  container.innerHTML=albums.map((a,i)=>{
+    const year=a.releaseDate?a.releaseDate.slice(0,4):"";
+    const tracks=a.tracksTotal?\`\${a.tracksTotal} canciones\`:"";
+    const meta=[year,tracks].filter(Boolean).join(" · ");
+    return \`
+      <div class="nov-alb-card" data-alb-id="\${a.id}" data-alb-index="\${i}">
+        <div class="nov-alb-cover">
+          \${a.cover
+            ?\`<img src="\${esc(a.cover)}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=nov-alb-cover-ph>💿</div>'">\`
+            :\`<div class="nov-alb-cover-ph">💿</div>\`}
+          <div class="nov-alb-play">
+            <svg width="14" height="14" fill="#000" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          </div>
+        </div>
+        <div class="nov-alb-name">\${esc(a.title)}</div>
+        <div class="nov-alb-artist">\${esc(a.artist)}</div>
+        \${meta?\`<div class="nov-alb-meta">\${esc(meta)}</div>\`:""}
+      </div>
+    \`;
+  }).join("");
+  container.querySelectorAll(".nov-alb-card").forEach(card=>{
+    card.addEventListener("click",()=>openAlbumPage(
+      parseInt(card.dataset.albId),
+      albums[parseInt(card.dataset.albIndex)]
+    ));
+  });
+}
+
+async function openAlbumPage(albumId,albumMeta){
+  const content=document.getElementById("mainContent");
+  content.innerHTML=\`<div class="ap-loading"><div class="spinner"></div> Cargando álbum...</div>\`;
+  try{
+    const res=await fetch(\`/api/album-tracks?id=\${albumId}\`);
+    const data=await res.json();
+    const tracks=data.tracks||[];
+    if(!tracks.length){content.innerHTML=\`<div class="ap-loading">No se encontraron canciones</div>\`;return;}
+    const pl={
+      name:data.title||albumMeta?.title||"Álbum",
+      desc:data.artist||albumMeta?.artist||"",
+      icon:"💿",
+      gradient:albumMeta?\`linear-gradient(135deg,rgba(0,0,0,.6),rgba(0,0,0,.85))\`:"linear-gradient(135deg,#a855f7,#6366f1)",
+      color:null,
+      id:"album-"+albumId,
+    };
+    const fakeBack={
+      back:()=>{
+        if(currentView==="home")loadGenre(currentGenre);
+        else setView(currentView);
+      }
+    };
+    renderPlaylistPage(pl,tracks,null);
+    // patch back button to go home properly
+    setTimeout(()=>{
+      const backBtn=content.querySelector("#plBackBtn");
+      if(backBtn){
+        backBtn.replaceWith(backBtn.cloneNode(true));
+        content.querySelector("#plBackBtn").addEventListener("click",()=>loadGenre(currentGenre));
+      }
+    },50);
+    // style hero with album cover
+    if(albumMeta?.cover){
+      setTimeout(()=>{
+        const hero=content.querySelector(".playlist-hero");
+        if(hero)hero.style.background="transparent";
+      },50);
+    }
+  }catch{
+    content.innerHTML=\`<div class="ap-loading">Error al cargar el álbum</div>\`;
+  }
 }
 
 // ─── Para Ti & Dice ────────────────────────────────────────────────────────────
