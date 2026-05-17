@@ -770,100 +770,139 @@ const HTML = `<!DOCTYPE html>
     .toast.show{opacity:1;}
 
     /* ── SEARCH VIEW ── */
-    .search-hero{padding:8px 0 24px;}
+    .explore-top{padding:0 0 28px;}
     .search-bar-wrap{
-      display:flex;align-items:center;gap:12px;
-      background:rgba(255,255,255,.07);
-      border:1.5px solid rgba(255,255,255,.12);
-      border-radius:18px;padding:14px 20px;
-      transition:border-color .2s,box-shadow .2s,background .2s;
+      display:flex;align-items:center;gap:14px;
+      background:rgba(255,255,255,.11);
+      backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+      border:1.5px solid rgba(255,255,255,.18);
+      border-radius:50px;padding:15px 22px;
+      transition:border-color .22s,box-shadow .22s,background .22s;
+      box-shadow:0 4px 28px rgba(0,0,0,.28);
     }
     .search-bar-wrap:focus-within{
-      border-color:rgba(168,85,247,.7);
-      box-shadow:0 0 0 4px rgba(168,85,247,.12);
-      background:rgba(168,85,247,.06);
+      border-color:rgba(168,85,247,.85);
+      box-shadow:0 0 0 4px rgba(168,85,247,.2),0 6px 32px rgba(0,0,0,.35);
+      background:rgba(168,85,247,.1);
     }
     .search-bar-wrap input{
       background:none;border:none;outline:none;
-      color:var(--text);font-size:1.05rem;width:100%;font-family:inherit;
+      color:#fff;font-size:1.08rem;width:100%;font-family:inherit;letter-spacing:.01em;
     }
-    .search-bar-wrap input::placeholder{color:rgba(255,255,255,.32);}
+    .search-bar-wrap input::placeholder{color:rgba(255,255,255,.42);}
     .search-clear-btn{
-      background:none;border:none;cursor:pointer;
-      color:rgba(255,255,255,.4);font-size:1rem;
-      padding:2px 4px;line-height:1;transition:color .2s;
-      flex-shrink:0;
+      background:rgba(255,255,255,.14);border:none;cursor:pointer;
+      color:rgba(255,255,255,.75);font-size:.75rem;
+      width:28px;height:28px;border-radius:50%;
+      display:flex;align-items:center;justify-content:center;
+      transition:background .2s,color .2s;flex-shrink:0;
     }
-    .search-clear-btn:hover{color:#fff;}
+    .search-clear-btn:hover{background:rgba(168,85,247,.5);color:#fff;}
     .search-section-title{
-      font-size:.7rem;font-weight:700;letter-spacing:.12em;
-      color:rgba(255,255,255,.35);text-transform:uppercase;
-      margin-bottom:12px;
+      font-size:1.18rem;font-weight:700;
+      color:#fff;margin-bottom:16px;letter-spacing:-.01em;
     }
-    .search-recents-wrap,.search-trending-wrap{margin-bottom:28px;}
-    .search-pills{display:flex;flex-wrap:wrap;gap:8px;}
-    .search-pill{
-      display:flex;align-items:center;gap:7px;
-      background:rgba(255,255,255,.06);
-      border:1px solid rgba(255,255,255,.1);
-      border-radius:50px;padding:7px 14px;
-      font-size:.85rem;color:var(--muted);cursor:pointer;
-      transition:background .15s,color .15s,border-color .15s;
+    .search-recents-wrap{margin-bottom:30px;}
+    .search-recent-list{display:flex;flex-direction:column;gap:2px;}
+    .search-recent-item{
+      display:flex;align-items:center;gap:14px;
+      padding:11px 12px;border-radius:12px;cursor:pointer;
+      transition:background .15s;color:rgba(255,255,255,.75);font-size:.9rem;
     }
-    .search-pill:hover{background:rgba(168,85,247,.18);border-color:rgba(168,85,247,.4);color:#fff;}
-    .search-pill.genre{background:rgba(168,85,247,.1);border-color:rgba(168,85,247,.25);color:rgba(168,85,247,.9);}
-    .search-pill.genre:hover{background:rgba(168,85,247,.28);color:#fff;}
-    .search-pill .pill-del{
-      color:rgba(255,255,255,.3);font-size:.8rem;
-      margin-left:2px;transition:color .15s;
+    .search-recent-item:hover{background:rgba(255,255,255,.07);color:#fff;}
+    .search-recent-icon{flex-shrink:0;opacity:.5;}
+    .search-recent-del{
+      margin-left:auto;background:none;border:none;cursor:pointer;
+      color:rgba(255,255,255,.25);font-size:.75rem;padding:5px 6px;
+      border-radius:50%;transition:background .15s,color .15s;
     }
-    .search-pill:hover .pill-del{color:rgba(255,255,255,.7);}
+    .search-recent-del:hover{background:rgba(255,255,255,.1);color:rgba(255,255,255,.8);}
+    .genre-grid{
+      display:grid;grid-template-columns:1fr 1fr;
+      gap:12px;margin-bottom:40px;
+    }
+    .genre-card{
+      position:relative;height:96px;border-radius:18px;overflow:hidden;
+      cursor:pointer;transition:transform .18s,box-shadow .2s;
+      box-shadow:0 6px 20px rgba(0,0,0,.35);
+    }
+    .genre-card:hover{transform:scale(1.035);box-shadow:0 10px 36px rgba(0,0,0,.5);}
+    .genre-card:active{transform:scale(.96);}
+    .genre-card-bg{position:absolute;inset:0;background:var(--gc);}
+    .genre-card-shine{
+      position:absolute;inset:0;
+      background:linear-gradient(135deg,rgba(255,255,255,.18) 0%,rgba(255,255,255,0) 55%);
+    }
+    .genre-card-icon{
+      position:absolute;right:-4px;bottom:-6px;
+      font-size:3.8rem;opacity:.3;line-height:1;
+      filter:drop-shadow(0 2px 8px rgba(0,0,0,.5));
+      transform:rotate(-10deg);
+    }
+    .genre-card-label{
+      position:absolute;top:0;left:0;bottom:0;right:0;
+      display:flex;align-items:flex-end;
+      padding:0 14px 13px;
+      background:linear-gradient(to top,rgba(0,0,0,.42) 0%,transparent 60%);
+    }
+    .genre-card-label span{
+      font-size:.95rem;font-weight:700;color:#fff;
+      text-shadow:0 1px 8px rgba(0,0,0,.7);letter-spacing:.01em;
+    }
     .search-results-header{
       display:flex;align-items:center;justify-content:space-between;
-      margin-bottom:14px;
+      margin-bottom:14px;padding-bottom:10px;
+      border-bottom:1px solid rgba(255,255,255,.06);
     }
-    .search-results-count{font-size:.85rem;color:var(--muted);}
+    .search-results-count{font-size:.82rem;color:var(--muted);font-weight:500;}
     .search-result-row{
       display:flex;align-items:center;gap:14px;
-      padding:10px 12px;border-radius:14px;cursor:pointer;
-      transition:background .15s;margin-bottom:4px;
+      padding:10px 10px;border-radius:14px;cursor:pointer;
+      transition:background .15s;margin-bottom:2px;
     }
-    .search-result-row:hover,.search-result-row.active-row{background:rgba(255,255,255,.06);}
+    .search-result-row:hover,.search-result-row.active-row{
+      background:rgba(255,255,255,.07);
+      backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    }
     .search-result-cover{
-      width:52px;height:52px;border-radius:10px;object-fit:cover;
+      width:56px;height:56px;border-radius:12px;object-fit:cover;
       flex-shrink:0;background:rgba(255,255,255,.08);
+      box-shadow:0 2px 12px rgba(0,0,0,.35);
     }
     .search-result-cover-ph{
-      width:52px;height:52px;border-radius:10px;flex-shrink:0;
-      background:linear-gradient(135deg,rgba(168,85,247,.25),rgba(99,102,241,.25));
-      display:flex;align-items:center;justify-content:center;font-size:1.2rem;
+      width:56px;height:56px;border-radius:12px;flex-shrink:0;
+      background:linear-gradient(135deg,rgba(168,85,247,.3),rgba(99,102,241,.3));
+      display:flex;align-items:center;justify-content:center;font-size:1.4rem;
     }
     .search-result-info{flex:1;min-width:0;}
     .search-result-title{
-      font-size:.95rem;font-weight:600;
+      font-size:.95rem;font-weight:600;color:#fff;
       white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
     }
-    .search-result-meta{font-size:.78rem;color:var(--muted);margin-top:2px;}
-    .search-result-actions{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+    .search-result-meta{font-size:.78rem;color:var(--muted);margin-top:3px;}
+    .search-result-actions{display:flex;align-items:center;gap:6px;flex-shrink:0;}
     .search-result-play{
-      width:34px;height:34px;border-radius:50%;
-      background:rgba(168,85,247,.2);border:none;cursor:pointer;
-      color:#fff;font-size:.85rem;display:flex;align-items:center;justify-content:center;
-      transition:background .15s,transform .15s;opacity:0;
+      width:36px;height:36px;border-radius:50%;
+      background:rgba(168,85,247,.28);
+      backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+      border:1px solid rgba(168,85,247,.45);cursor:pointer;
+      color:#fff;display:flex;align-items:center;justify-content:center;
+      transition:background .15s,transform .15s,box-shadow .15s;opacity:0;
     }
     .search-result-row:hover .search-result-play{opacity:1;}
-    .search-result-play:hover{background:rgba(168,85,247,.5);transform:scale(1.08);}
+    .search-result-play:hover{
+      background:rgba(168,85,247,.65);transform:scale(1.1);
+      box-shadow:0 0 18px rgba(168,85,247,.45);
+    }
     .search-result-dots{
-      background:none;border:none;cursor:pointer;color:rgba(255,255,255,.4);
-      font-size:1.1rem;padding:4px;transition:color .15s;opacity:0;
+      background:none;border:none;cursor:pointer;color:rgba(255,255,255,.38);
+      font-size:1.2rem;padding:4px 7px;transition:color .15s;opacity:0;
     }
     .search-result-row:hover .search-result-dots{opacity:1;}
     .search-result-dots:hover{color:#fff;}
-    .search-empty-state{
-      text-align:center;padding:60px 20px;
-    }
-    .search-empty-icon{font-size:3rem;margin-bottom:12px;opacity:.5;}
-    .search-empty-text{color:var(--muted);font-size:.95rem;}
+    .search-empty-state{text-align:center;padding:70px 20px;}
+    .search-empty-icon{font-size:3.2rem;margin-bottom:14px;opacity:.45;}
+    .search-empty-text{color:var(--muted);font-size:.95rem;line-height:1.6;}
 
     /* ── DESKTOP OVERRIDES ── */
     @media(min-width:768px){
@@ -2493,7 +2532,20 @@ function saveRecentSearch(q){if(!q||q.length<2)return;let r=getRecentSearches().
 function removeRecentSearch(q){const r=getRecentSearches().filter(x=>x!==q);localStorage.setItem(RECENT_SEARCHES_KEY,JSON.stringify(r));renderSearchPlaceholder();}
 function clearAllRecents(){localStorage.removeItem(RECENT_SEARCHES_KEY);renderSearchPlaceholder();}
 
-const TRENDING_TERMS=["Bad Bunny","Shakira","Karol G","Bizarrap","Rauw Alejandro","Rosalía","J Balvin","Myke Towers","Peso Pluma","Feid","Maluma","Anuel AA"];
+const GENRE_CARDS=[
+  {label:"Pop",color:"linear-gradient(135deg,#E91E8C,#9C27B0)",icon:"🎤"},
+  {label:"Reggaeton",color:"linear-gradient(135deg,#FF6D00,#E91E63)",icon:"🔥"},
+  {label:"Rock",color:"linear-gradient(135deg,#546E7A,#212121)",icon:"🎸"},
+  {label:"Latina",color:"linear-gradient(135deg,#00897B,#2E7D32)",icon:"💃"},
+  {label:"Hip-Hop",color:"linear-gradient(135deg,#F57F17,#BF360C)",icon:"🎧"},
+  {label:"Electrónica",color:"linear-gradient(135deg,#1565C0,#6A1B9A)",icon:"⚡"},
+  {label:"Baladas",color:"linear-gradient(135deg,#AD1457,#4527A0)",icon:"💜"},
+  {label:"R&B",color:"linear-gradient(135deg,#6A1B9A,#1A237E)",icon:"🎶"},
+  {label:"Trap",color:"linear-gradient(135deg,#263238,#546E7A)",icon:"🔱"},
+  {label:"Salsa",color:"linear-gradient(135deg,#B71C1C,#E65100)",icon:"🥁"},
+  {label:"Indie",color:"linear-gradient(135deg,#33691E,#1B5E20)",icon:"🌿"},
+  {label:"Metal",color:"linear-gradient(135deg,#37474F,#880E4F)",icon:"🤘"},
+];
 
 function renderSearchPlaceholder(){
   const area=document.getElementById("searchResults");
@@ -2501,24 +2553,32 @@ function renderSearchPlaceholder(){
   const recents=getRecentSearches();
   const recHtml=recents.length?\`
     <div class="search-recents-wrap">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-        <div class="search-section-title">Búsquedas recientes</div>
-        <button onclick="clearAllRecents()" style="background:none;border:none;cursor:pointer;color:rgba(168,85,247,.8);font-size:.78rem;font-weight:600;">Limpiar todo</button>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div class="search-section-title" style="margin-bottom:0">Recientes</div>
+        <button onclick="clearAllRecents()" style="background:none;border:none;cursor:pointer;color:rgba(168,85,247,.85);font-size:.8rem;font-weight:600;padding:4px 8px;border-radius:8px;transition:background .15s" onmouseover="this.style.background='rgba(168,85,247,.12)'" onmouseout="this.style.background='none'">Limpiar</button>
       </div>
-      <div class="search-pills">
-        \${recents.map(r=>\`<div class="search-pill" onclick="fillSearch('\${esc(r)}')">
-          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          \${esc(r)}<span class="pill-del" onclick="event.stopPropagation();removeRecentSearch('\${esc(r)}')" title="Quitar">✕</span>
-        </div>\`).join("")}
+      <div class="search-recent-list">
+        \${recents.map(r=>\`
+          <div class="search-recent-item" onclick="fillSearch('\${esc(r)}')">
+            <svg class="search-recent-icon" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            \${esc(r)}
+            <button class="search-recent-del" onclick="event.stopPropagation();removeRecentSearch('\${esc(r)}')" title="Quitar">✕</button>
+          </div>
+        \`).join("")}
       </div>
     </div>\`:"";
   area.innerHTML=\`
     \${recHtml}
-    <div class="search-trending-wrap">
-      <div class="search-section-title">Tendencias</div>
-      <div class="search-pills">
-        \${TRENDING_TERMS.map(t=>\`<div class="search-pill genre" onclick="fillSearch('\${esc(t)}')">\${esc(t)}</div>\`).join("")}
-      </div>
+    <div class="search-section-title">Explorar todo</div>
+    <div class="genre-grid">
+      \${GENRE_CARDS.map(g=>\`
+        <div class="genre-card" onclick="fillSearch('\${esc(g.label)}')" style="--gc:\${g.color}">
+          <div class="genre-card-bg"></div>
+          <div class="genre-card-shine"></div>
+          <span class="genre-card-icon">\${g.icon}</span>
+          <div class="genre-card-label"><span>\${esc(g.label)}</span></div>
+        </div>
+      \`).join("")}
     </div>
   \`;
 }
@@ -2536,12 +2596,12 @@ function fillSearch(q){
 function renderSearch(){
   const content=document.getElementById("mainContent");
   content.innerHTML=\`
-    <div class="search-hero">
+    <div class="explore-top">
       <div class="search-bar-wrap" id="searchBarWrap">
-        <svg width="18" height="18" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="2.2" viewBox="0 0 24 24" flex-shrink="0" style="flex-shrink:0"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-        <input type="text" id="searchViewInput" placeholder="Artistas, canciones, álbumes..." autocomplete="off" spellcheck="false">
+        <svg width="20" height="20" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="2.2" viewBox="0 0 24 24" style="flex-shrink:0"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="searchViewInput" placeholder="¿Qué quieres escuchar?" autocomplete="off" spellcheck="false">
         <button id="searchClearBtn" class="search-clear-btn" style="display:none" title="Borrar">
-          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.8" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
     </div>
