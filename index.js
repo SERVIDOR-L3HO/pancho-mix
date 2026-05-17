@@ -554,6 +554,30 @@ app.get("/api/youtube-search", async (req, res) => {
   }
 });
 
+// GET /api/artist-albums?id=X — albums for a Deezer artist
+app.get("/api/artist-albums", async (req, res) => {
+  const id = parseInt(req.query.id);
+  if (!id) return res.status(400).json({ error: "id required", albums: [] });
+  try {
+    const r = await fetch(`https://api.deezer.com/artist/${id}/albums?limit=20`, {
+      headers: { "User-Agent": USER_AGENT }
+    });
+    const data = await r.json();
+    const albums = (data.data || []).map(a => ({
+      id: a.id,
+      title: a.title,
+      artist: a.artist?.name || "",
+      cover: a.cover_xl || a.cover_big || a.cover_medium || null,
+      releaseDate: a.release_date || "",
+      tracksTotal: a.nb_tracks || 0,
+      recordType: a.record_type || "album",
+    }));
+    res.json({ albums });
+  } catch (err) {
+    res.status(500).json({ error: err.message, albums: [] });
+  }
+});
+
 // GET /api/artist-profile?deezerId=X&name=Y — top tracks + artist info
 const artistTopCache = {};
 app.get("/api/artist-profile", async (req, res) => {
@@ -1284,6 +1308,49 @@ const HTML = `<!DOCTYPE html>
       font-size:.68rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;
       color:rgba(255,255,255,.28);margin-bottom:6px;padding-left:10px;
     }
+    /* artist search: albums + playlists */
+    .sr-sec{margin:22px 0 6px;}
+    .sr-sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+    .sr-sec-title{font-size:.75rem;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:rgba(255,255,255,.3);}
+    .sr-alb-scroll{display:flex;gap:13px;overflow-x:auto;padding-bottom:6px;scrollbar-width:none;}
+    .sr-alb-scroll::-webkit-scrollbar{display:none;}
+    .sr-alb-card{flex-shrink:0;width:130px;cursor:pointer;transition:transform .18s;}
+    .sr-alb-card:hover{transform:translateY(-3px);}
+    .sr-alb-card:active{transform:scale(.95);}
+    .sr-alb-cover{
+      width:130px;height:130px;border-radius:12px;overflow:hidden;position:relative;
+      background:rgba(255,255,255,.06);box-shadow:0 4px 18px rgba(0,0,0,.4);margin-bottom:8px;
+    }
+    .sr-alb-cover img{width:100%;height:100%;object-fit:cover;display:block;}
+    .sr-alb-cover-ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:3rem;}
+    .sr-alb-type{
+      position:absolute;bottom:6px;left:6px;
+      font-size:.58rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+      background:rgba(0,0,0,.55);backdrop-filter:blur(6px);
+      color:rgba(255,255,255,.7);padding:2px 7px;border-radius:50px;
+    }
+    .sr-alb-title{font-size:.8rem;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .sr-alb-year{font-size:.68rem;color:var(--muted);margin-top:2px;}
+    .sr-alb-skel{flex-shrink:0;width:130px;}
+    .sr-alb-skel-cover{width:130px;height:130px;border-radius:12px;margin-bottom:8px;
+      background:rgba(255,255,255,.06);animation:skelShimmer 1.4s infinite;background-size:200% 100%;}
+    .sr-alb-skel-line{height:10px;border-radius:5px;background:rgba(255,255,255,.05);
+      animation:skelShimmer 1.4s infinite;background-size:200% 100%;margin-bottom:5px;}
+    /* sr playlists */
+    .sr-pl-scroll{display:flex;gap:13px;overflow-x:auto;padding-bottom:6px;scrollbar-width:none;}
+    .sr-pl-scroll::-webkit-scrollbar{display:none;}
+    .sr-pl-card{flex-shrink:0;width:130px;cursor:pointer;transition:transform .18s;}
+    .sr-pl-card:hover{transform:translateY(-3px);}
+    .sr-pl-card:active{transform:scale(.95);}
+    .sr-pl-cover{
+      width:130px;height:130px;border-radius:12px;overflow:hidden;position:relative;
+      box-shadow:0 4px 18px rgba(0,0,0,.4);margin-bottom:8px;
+    }
+    .sr-pl-cover-grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;width:100%;height:100%;}
+    .sr-pl-cover-grid img{width:100%;height:100%;object-fit:cover;}
+    .sr-pl-cover-icon{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:3rem;}
+    .sr-pl-name{font-size:.8rem;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .sr-pl-desc{font-size:.68rem;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
     .search-result-row{
       display:flex;align-items:center;gap:14px;
       padding:9px 10px;border-radius:14px;cursor:pointer;
@@ -3393,6 +3460,18 @@ function renderResults(songs, query, artist){
         </div>
       </div>\`;
     }).join("");
+    const skelAlbums=Array.from({length:5}).map(()=>\`
+      <div class="sr-alb-skel">
+        <div class="sr-alb-skel-cover"></div>
+        <div class="sr-alb-skel-line" style="width:80%"></div>
+        <div class="sr-alb-skel-line" style="width:55%"></div>
+      </div>\`).join("");
+    const skelPl=Array.from({length:4}).map(()=>\`
+      <div class="sr-alb-skel">
+        <div class="sr-alb-skel-cover"></div>
+        <div class="sr-alb-skel-line" style="width:80%"></div>
+        <div class="sr-alb-skel-line" style="width:55%"></div>
+      </div>\`).join("");
     area.innerHTML=\`
       <div class="artist-card">
         \${avatarHtml}
@@ -3409,8 +3488,18 @@ function renderResults(songs, query, artist){
           </button>
         </div>
       </div>
-      <div class="sr-list-label">Canciones</div>
-      \${songRows}
+      <div class="sr-sec">
+        <div class="sr-sec-hdr"><div class="sr-sec-title">Álbumes</div></div>
+        <div class="sr-alb-scroll" id="srAlbScroll">\${skelAlbums}</div>
+      </div>
+      <div class="sr-sec">
+        <div class="sr-sec-hdr"><div class="sr-sec-title">Playlists</div></div>
+        <div class="sr-pl-scroll" id="srPlScroll">\${skelPl}</div>
+      </div>
+      <div class="sr-sec">
+        <div class="sr-sec-hdr"><div class="sr-sec-title">Canciones populares</div></div>
+        \${songRows}
+      </div>
       <div style="padding-bottom:36px"></div>
     \`;
     area.querySelector(".artist-card").addEventListener("click",e=>{
@@ -3430,6 +3519,7 @@ function renderResults(songs, query, artist){
     });
     highlightRows();
     enrichListCovers(songs);
+    loadArtistSearchExtras(artist,songs,area);
     return;
   }
 
@@ -3551,6 +3641,88 @@ async function doSearch(q){
 
 function syncChips(genre){
   document.querySelectorAll(".chip").forEach(c=>c.classList.toggle("active",c.dataset.genre===genre));
+}
+
+// ─── Artist Search Extras (Albums + Playlists) ────────────────────────────────
+async function loadArtistSearchExtras(artist,songs,area){
+  if(!artist||!artist.id)return;
+  const albScroll=area.querySelector("#srAlbScroll");
+  const plScroll=area.querySelector("#srPlScroll");
+
+  // Playlists from artist songs (immediate, no fetch needed)
+  const PL_DEFS=[
+    {name:\`Éxitos · \${esc(artist.name)}\`,desc:"Sus canciones más escuchadas",icon:"🏆",
+     gradient:"linear-gradient(135deg,#a855f7,#6366f1)"},
+    {name:\`\${esc(artist.name)} Mix\`,desc:"Una mezcla perfecta",icon:"🎵",
+     gradient:"linear-gradient(135deg,#0ea5e9,#2563eb)"},
+    {name:\`\${esc(artist.name)} Noche\`,desc:"Para cuando cae la noche",icon:"🌙",
+     gradient:"linear-gradient(135deg,#1e1b4b,#6d28d9)"},
+    {name:\`\${esc(artist.name)} Chill\`,desc:"La versión relajada",icon:"🌊",
+     gradient:"linear-gradient(135deg,#059669,#0891b2)"},
+  ];
+  if(plScroll&&songs.length){
+    const withCovers=songs.filter(s=>s.albumCover);
+    plScroll.innerHTML=PL_DEFS.map((pl,i)=>{
+      const picks=withCovers.slice(i*2,(i*2)+4);
+      let coverHtml;
+      if(picks.length>=4){
+        coverHtml=\`<div class="sr-pl-cover-grid">\${picks.map(s=>\`<img src="\${esc(s.albumCover)}" loading="lazy">\`).join("")}</div>\`;
+      } else if(picks.length>=1){
+        coverHtml=\`<img src="\${esc(picks[0].albumCover)}" style="width:100%;height:100%;object-fit:cover" loading="lazy">\`;
+      } else {
+        coverHtml=\`<div class="sr-pl-cover-icon" style="background:\${pl.gradient}">\${pl.icon}</div>\`;
+      }
+      return \`<div class="sr-pl-card" data-pl-index="\${i}">
+        <div class="sr-pl-cover" style="background:\${pl.gradient}">\${coverHtml}</div>
+        <div class="sr-pl-name">\${pl.name}</div>
+        <div class="sr-pl-desc">\${pl.desc}</div>
+      </div>\`;
+    }).join("");
+    plScroll.querySelectorAll(".sr-pl-card").forEach(card=>{
+      const i=parseInt(card.dataset.plIndex);
+      card.addEventListener("click",()=>{
+        const shuffled=[...songs].sort(()=>Math.random()-.5);
+        const pl={
+          name:PL_DEFS[i].name.replace(/&amp;/g,"&"),
+          desc:PL_DEFS[i].desc,
+          icon:PL_DEFS[i].icon,
+          gradient:PL_DEFS[i].gradient,
+          color:null,id:"srpl-"+i
+        };
+        renderPlaylistPage(pl,shuffled,null);
+      });
+    });
+  }
+
+  // Albums from Deezer (async)
+  try{
+    const res=await fetch(\`/api/artist-albums?id=\${artist.id}\`);
+    const data=await res.json();
+    const albums=data.albums||[];
+    if(!albScroll)return;
+    if(!albums.length){albScroll.innerHTML=\`<div style="color:var(--muted);font-size:.8rem">No se encontraron álbumes</div>\`;return;}
+    albScroll.innerHTML=albums.map((a,i)=>{
+      const year=a.releaseDate?a.releaseDate.slice(0,4):"";
+      const typeMap={album:"Álbum",single:"Single",ep:"EP",compilation:"Comp."};
+      const badge=typeMap[a.recordType]||a.recordType||"Álbum";
+      return \`<div class="sr-alb-card" data-alb-id="\${a.id}" data-alb-index="\${i}">
+        <div class="sr-alb-cover">
+          \${a.cover?\`<img src="\${esc(a.cover)}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=sr-alb-cover-ph>💿</div>'">\`:\`<div class="sr-alb-cover-ph">💿</div>\`}
+          <div class="sr-alb-type">\${badge}</div>
+        </div>
+        <div class="sr-alb-title">\${esc(a.title)}</div>
+        \${year?\`<div class="sr-alb-year">\${year}</div>\`:""}
+      </div>\`;
+    }).join("");
+    albScroll.querySelectorAll(".sr-alb-card").forEach(card=>{
+      card.addEventListener("click",()=>openAlbumPage(
+        parseInt(card.dataset.albId),
+        albums[parseInt(card.dataset.albIndex)]
+      ));
+    });
+  }catch{
+    if(albScroll)albScroll.innerHTML=\`<div style="color:var(--muted);font-size:.8rem">Error al cargar álbumes</div>\`;
+  }
 }
 
 // ─── Novedades Albums ──────────────────────────────────────────────────────────
