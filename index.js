@@ -1695,7 +1695,7 @@ const HTML = `<!DOCTYPE html>
       transform:scale(1.15);
       transition:background-image .8s;
     }
-    .fp-content{position:relative;z-index:1;display:flex;flex-direction:column;height:100%;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
+    .fp-content{position:relative;z-index:1;display:flex;flex-direction:column;flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
     .fp-content::-webkit-scrollbar{display:none;}
 
     /* Header */
