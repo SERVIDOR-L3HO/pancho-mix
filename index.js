@@ -506,18 +506,7 @@ const HTML = `<!DOCTYPE html>
     }
     .logo-text{background:linear-gradient(90deg,#fff,rgba(255,255,255,.7));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
 
-    .topbar-search{
-      display:flex;align-items:center;gap:9px;
-      background:var(--glass2);
-      border:1px solid var(--border2);
-      border-radius:50px;
-      padding:9px 18px;
-      width:320px;max-width:45vw;
-      transition:border-color .2s,box-shadow .2s;
-    }
-    .topbar-search:focus-within{border-color:rgba(168,85,247,.6);box-shadow:0 0 0 3px rgba(168,85,247,.1);}
-    .topbar-search input{background:none;border:none;outline:none;color:var(--text);font-size:.875rem;width:100%;font-family:inherit;}
-    .topbar-search input::placeholder{color:var(--muted2);}
+
 
     .topbar-right{display:flex;align-items:center;gap:12px;}
     .avatar{
@@ -781,15 +770,100 @@ const HTML = `<!DOCTYPE html>
     .toast.show{opacity:1;}
 
     /* ── SEARCH VIEW ── */
-    .search-view-input{
-      display:flex;align-items:center;gap:10px;
-      background:var(--glass2);border:1px solid var(--border2);
-      border-radius:14px;padding:13px 18px;margin-bottom:20px;
-      transition:border-color .2s;
+    .search-hero{padding:8px 0 24px;}
+    .search-bar-wrap{
+      display:flex;align-items:center;gap:12px;
+      background:rgba(255,255,255,.07);
+      border:1.5px solid rgba(255,255,255,.12);
+      border-radius:18px;padding:14px 20px;
+      transition:border-color .2s,box-shadow .2s,background .2s;
     }
-    .search-view-input:focus-within{border-color:rgba(168,85,247,.5);}
-    .search-view-input input{background:none;border:none;outline:none;color:var(--text);font-size:1rem;width:100%;font-family:inherit;}
-    .search-view-input input::placeholder{color:var(--muted2);}
+    .search-bar-wrap:focus-within{
+      border-color:rgba(168,85,247,.7);
+      box-shadow:0 0 0 4px rgba(168,85,247,.12);
+      background:rgba(168,85,247,.06);
+    }
+    .search-bar-wrap input{
+      background:none;border:none;outline:none;
+      color:var(--text);font-size:1.05rem;width:100%;font-family:inherit;
+    }
+    .search-bar-wrap input::placeholder{color:rgba(255,255,255,.32);}
+    .search-clear-btn{
+      background:none;border:none;cursor:pointer;
+      color:rgba(255,255,255,.4);font-size:1rem;
+      padding:2px 4px;line-height:1;transition:color .2s;
+      flex-shrink:0;
+    }
+    .search-clear-btn:hover{color:#fff;}
+    .search-section-title{
+      font-size:.7rem;font-weight:700;letter-spacing:.12em;
+      color:rgba(255,255,255,.35);text-transform:uppercase;
+      margin-bottom:12px;
+    }
+    .search-recents-wrap,.search-trending-wrap{margin-bottom:28px;}
+    .search-pills{display:flex;flex-wrap:wrap;gap:8px;}
+    .search-pill{
+      display:flex;align-items:center;gap:7px;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.1);
+      border-radius:50px;padding:7px 14px;
+      font-size:.85rem;color:var(--muted);cursor:pointer;
+      transition:background .15s,color .15s,border-color .15s;
+    }
+    .search-pill:hover{background:rgba(168,85,247,.18);border-color:rgba(168,85,247,.4);color:#fff;}
+    .search-pill.genre{background:rgba(168,85,247,.1);border-color:rgba(168,85,247,.25);color:rgba(168,85,247,.9);}
+    .search-pill.genre:hover{background:rgba(168,85,247,.28);color:#fff;}
+    .search-pill .pill-del{
+      color:rgba(255,255,255,.3);font-size:.8rem;
+      margin-left:2px;transition:color .15s;
+    }
+    .search-pill:hover .pill-del{color:rgba(255,255,255,.7);}
+    .search-results-header{
+      display:flex;align-items:center;justify-content:space-between;
+      margin-bottom:14px;
+    }
+    .search-results-count{font-size:.85rem;color:var(--muted);}
+    .search-result-row{
+      display:flex;align-items:center;gap:14px;
+      padding:10px 12px;border-radius:14px;cursor:pointer;
+      transition:background .15s;margin-bottom:4px;
+    }
+    .search-result-row:hover,.search-result-row.active-row{background:rgba(255,255,255,.06);}
+    .search-result-cover{
+      width:52px;height:52px;border-radius:10px;object-fit:cover;
+      flex-shrink:0;background:rgba(255,255,255,.08);
+    }
+    .search-result-cover-ph{
+      width:52px;height:52px;border-radius:10px;flex-shrink:0;
+      background:linear-gradient(135deg,rgba(168,85,247,.25),rgba(99,102,241,.25));
+      display:flex;align-items:center;justify-content:center;font-size:1.2rem;
+    }
+    .search-result-info{flex:1;min-width:0;}
+    .search-result-title{
+      font-size:.95rem;font-weight:600;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    }
+    .search-result-meta{font-size:.78rem;color:var(--muted);margin-top:2px;}
+    .search-result-actions{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+    .search-result-play{
+      width:34px;height:34px;border-radius:50%;
+      background:rgba(168,85,247,.2);border:none;cursor:pointer;
+      color:#fff;font-size:.85rem;display:flex;align-items:center;justify-content:center;
+      transition:background .15s,transform .15s;opacity:0;
+    }
+    .search-result-row:hover .search-result-play{opacity:1;}
+    .search-result-play:hover{background:rgba(168,85,247,.5);transform:scale(1.08);}
+    .search-result-dots{
+      background:none;border:none;cursor:pointer;color:rgba(255,255,255,.4);
+      font-size:1.1rem;padding:4px;transition:color .15s;opacity:0;
+    }
+    .search-result-row:hover .search-result-dots{opacity:1;}
+    .search-result-dots:hover{color:#fff;}
+    .search-empty-state{
+      text-align:center;padding:60px 20px;
+    }
+    .search-empty-icon{font-size:3rem;margin-bottom:12px;opacity:.5;}
+    .search-empty-text{color:var(--muted);font-size:.95rem;}
 
     /* ── DESKTOP OVERRIDES ── */
     @media(min-width:768px){
@@ -807,7 +881,6 @@ const HTML = `<!DOCTYPE html>
     }
     @media(max-width:767px){
       .sidebar{display:none;}
-      .topbar-search{max-width:50vw;}
       .topbar-right .avatar{display:none;}
       .vol-wrap,.prog-times{display:none;}
       .album-grid{grid-template-columns:repeat(2,1fr);}
@@ -1471,10 +1544,6 @@ const HTML = `<!DOCTYPE html>
   <div class="logo">
     <div class="logo-icon">🎵</div>
     <span class="logo-text">PANCHO MIX</span>
-  </div>
-  <div class="topbar-search" id="topSearch" style="display:none">
-    <svg width="15" height="15" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-    <input type="text" id="searchInput" placeholder="Buscar canciones, artistas...">
   </div>
   <div class="topbar-right">
     <div class="avatar" id="avatarBtn" title="Perfil">🎧</div>
@@ -2418,30 +2487,121 @@ function renderHome(songs, gridSongs){
   enrichListCovers(songs);
 }
 
+const RECENT_SEARCHES_KEY="pancho_recent_searches";
+function getRecentSearches(){try{return JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY)||"[]");}catch{return[];}}
+function saveRecentSearch(q){if(!q||q.length<2)return;let r=getRecentSearches().filter(x=>x!==q);r.unshift(q);r=r.slice(0,8);localStorage.setItem(RECENT_SEARCHES_KEY,JSON.stringify(r));}
+function removeRecentSearch(q){const r=getRecentSearches().filter(x=>x!==q);localStorage.setItem(RECENT_SEARCHES_KEY,JSON.stringify(r));renderSearchPlaceholder();}
+function clearAllRecents(){localStorage.removeItem(RECENT_SEARCHES_KEY);renderSearchPlaceholder();}
+
+const TRENDING_TERMS=["Bad Bunny","Shakira","Karol G","Bizarrap","Rauw Alejandro","Rosalía","J Balvin","Myke Towers","Peso Pluma","Feid","Maluma","Anuel AA"];
+
+function renderSearchPlaceholder(){
+  const area=document.getElementById("searchResults");
+  if(!area)return;
+  const recents=getRecentSearches();
+  const recHtml=recents.length?\`
+    <div class="search-recents-wrap">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div class="search-section-title">Búsquedas recientes</div>
+        <button onclick="clearAllRecents()" style="background:none;border:none;cursor:pointer;color:rgba(168,85,247,.8);font-size:.78rem;font-weight:600;">Limpiar todo</button>
+      </div>
+      <div class="search-pills">
+        \${recents.map(r=>\`<div class="search-pill" onclick="fillSearch('\${esc(r)}')">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          \${esc(r)}<span class="pill-del" onclick="event.stopPropagation();removeRecentSearch('\${esc(r)}')" title="Quitar">✕</span>
+        </div>\`).join("")}
+      </div>
+    </div>\`:"";
+  area.innerHTML=\`
+    \${recHtml}
+    <div class="search-trending-wrap">
+      <div class="search-section-title">Tendencias</div>
+      <div class="search-pills">
+        \${TRENDING_TERMS.map(t=>\`<div class="search-pill genre" onclick="fillSearch('\${esc(t)}')">\${esc(t)}</div>\`).join("")}
+      </div>
+    </div>
+  \`;
+}
+
+function fillSearch(q){
+  const inp=document.getElementById("searchViewInput");
+  if(!inp)return;
+  inp.value=q;inp.focus();
+  const clearBtn=document.getElementById("searchClearBtn");
+  if(clearBtn)clearBtn.style.display=q?"flex":"none";
+  clearTimeout(searchTimeout);
+  searchTimeout=setTimeout(()=>doSearch(q),100);
+}
+
 function renderSearch(){
   const content=document.getElementById("mainContent");
   content.innerHTML=\`
-    <div class="search-view-input">
-      <svg width="18" height="18" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-      <input type="text" id="searchViewInput" placeholder="Artistas, canciones, álbumes..." autofocus>
+    <div class="search-hero">
+      <div class="search-bar-wrap" id="searchBarWrap">
+        <svg width="18" height="18" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="2.2" viewBox="0 0 24 24" flex-shrink="0" style="flex-shrink:0"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="searchViewInput" placeholder="Artistas, canciones, álbumes..." autocomplete="off" spellcheck="false">
+        <button id="searchClearBtn" class="search-clear-btn" style="display:none" title="Borrar">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
     </div>
-    <div id="searchResults"><div class="empty-msg" style="padding:40px 0"><span>🔍 Busca tu música favorita</span></div></div>
+    <div id="searchResults"></div>
   \`;
+  renderSearchPlaceholder();
   const inp=content.querySelector("#searchViewInput");
+  const clearBtn=content.querySelector("#searchClearBtn");
   inp.addEventListener("input",e=>{
-    clearTimeout(searchTimeout);
     const q=e.target.value.trim();
-    searchTimeout=setTimeout(()=>doSearch(q),480);
+    clearBtn.style.display=q?"flex":"none";
+    clearTimeout(searchTimeout);
+    if(!q){renderSearchPlaceholder();return;}
+    searchTimeout=setTimeout(()=>doSearch(q),420);
   });
+  inp.addEventListener("keydown",e=>{
+    if(e.key==="Enter"){const q=inp.value.trim();if(q){clearTimeout(searchTimeout);doSearch(q);}}
+    if(e.key==="Escape"){inp.value="";clearBtn.style.display="none";renderSearchPlaceholder();}
+  });
+  clearBtn.addEventListener("click",()=>{inp.value="";clearBtn.style.display="none";inp.focus();renderSearchPlaceholder();});
+  inp.focus();
 }
 
 function renderResults(songs, query){
   const area=document.getElementById("searchResults");
-  if(!songs||!songs.length){area.innerHTML=\`<div class="empty-msg">Sin resultados para "\${esc(query)}"</div>\`;return;}
-  area.innerHTML=\`<div class="sec-title" style="margin-bottom:12px">\${songs.length} resultados para "\${esc(query)}"</div><div class="song-list">\${songs.map((s,i)=>songRowHtml(s,i)).join("")}</div>\`;
-  area.querySelectorAll(".song-row").forEach(row=>{
-    row.addEventListener("click",()=>{const i=parseInt(row.dataset.index);playSong(songs[i],songs);});
-    row.querySelector(".row-dots").addEventListener("click",e=>{e.stopPropagation();openCtxMenu(e,songs[parseInt(row.dataset.index)]);});
+  if(!songs||!songs.length){
+    area.innerHTML=\`<div class="search-empty-state">
+      <div class="search-empty-icon">🎵</div>
+      <div class="search-empty-text">Sin resultados para "<strong>\${esc(query)}</strong>"<br><span style="font-size:.8rem;margin-top:6px;display:block">Intenta con otro nombre o artista</span></div>
+    </div>\`;
+    return;
+  }
+  area.innerHTML=\`
+    <div class="search-results-header">
+      <div class="search-results-count">\${songs.length} resultado\${songs.length!==1?"s":""} para "<strong>\${esc(query)}</strong>"</div>
+    </div>
+    \${songs.map((s,i)=>\`
+      <div class="search-result-row \${currentSong&&currentSong.id===s.id?"active-row":""}" data-song-id="\${s.id}" data-index="\${i}">
+        \${s.albumCover
+          ?\`<img class="search-result-cover" src="\${esc(s.albumCover)}" loading="lazy" onerror="this.outerHTML='<div class=search-result-cover-ph>🎵</div>'">`
+          :\`<div class="search-result-cover-ph">🎵</div>\`}
+        <div class="search-result-info">
+          <div class="search-result-title">\${esc(s.title)}</div>
+          <div class="search-result-meta">\${esc(s.artistName)}\${s.duration?\` · \${Math.floor(s.duration/60)}:\${String(s.duration%60).padStart(2,"0")}`:""}</div>
+        </div>
+        <div class="search-result-actions">
+          <button class="search-result-play" title="Reproducir">
+            <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          </button>
+          <button class="search-result-dots" title="Más opciones">⋯</button>
+        </div>
+      </div>
+    \`).join("")}
+    <div style="padding-bottom:24px"></div>
+  \`;
+  area.querySelectorAll(".search-result-row").forEach(row=>{
+    const i=parseInt(row.dataset.index);
+    row.addEventListener("click",()=>playSong(songs[i],songs));
+    row.querySelector(".search-result-play").addEventListener("click",e=>{e.stopPropagation();playSong(songs[i],songs);});
+    row.querySelector(".search-result-dots").addEventListener("click",e=>{e.stopPropagation();openCtxMenu(e,songs[i]);});
   });
   highlightRows();
   enrichListCovers(songs);
@@ -2499,18 +2659,15 @@ async function loadGenre(genre){
 }
 
 async function doSearch(q){
-  if(!q||q.length<2){
-    const area=document.getElementById("searchResults");
-    if(area)area.innerHTML=\`<div class="empty-msg" style="padding:40px 0"><span>🔍 Busca tu música favorita</span></div>\`;
-    return;
-  }
+  if(!q||q.length<2){renderSearchPlaceholder();return;}
   const area=document.getElementById("searchResults");
-  if(area)area.innerHTML=\`<div class="loading-msg"><div class="spinner"></div>Buscando...</div>\`;
+  if(area)area.innerHTML=\`<div class="loading-msg"><div class="spinner"></div>Buscando "<strong>\${esc(q)}</strong>"...</div>\`;
   try{
     const res=await fetch("/api/search?q="+encodeURIComponent(q));
     const data=await res.json();
+    saveRecentSearch(q);
     renderResults(data.songs||[],q);
-  }catch(e){if(area)area.innerHTML=\`<div class="empty-msg">Error: \${esc(e.message)}</div>\`;}
+  }catch(e){if(area)area.innerHTML=\`<div class="search-empty-state"><div class="search-empty-icon">⚠️</div><div class="search-empty-text">Error al buscar</div></div>\`;}
 }
 
 function syncChips(genre){
@@ -2522,7 +2679,6 @@ function setView(view){
   currentView=view;
   document.querySelectorAll(".sidebar-item[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
   document.querySelectorAll(".nav-item[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
-  document.getElementById("topSearch").style.display=view==="search"?"flex":"none";
   if(view==="home"){ loadGenre(currentGenre); }
   else if(view==="search"){ renderSearch(); }
   else if(view==="library"){ renderLibrary(); }
@@ -2533,12 +2689,6 @@ document.querySelectorAll(".sidebar-item[data-view], .nav-item[data-view]").forE
 });
 document.querySelectorAll(".sidebar-item[data-genre], .nav-item[data-genre]").forEach(btn=>{
   btn.addEventListener("click",()=>{setView("home");setTimeout(()=>loadGenre(btn.dataset.genre),50);});
-});
-
-document.getElementById("searchInput").addEventListener("input",e=>{
-  clearTimeout(searchTimeout);
-  const q=e.target.value.trim();
-  searchTimeout=setTimeout(()=>doSearch(q),480);
 });
 
 document.getElementById("miniProgress").addEventListener("click",e=>{
