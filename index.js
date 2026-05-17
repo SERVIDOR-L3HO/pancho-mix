@@ -462,6 +462,19 @@ app.get("/api/trending", async (req, res) => {
   }
 });
 
+// GET /api/artist-photos?names=A,B,C — batch artist photos from Deezer
+app.get("/api/artist-photos", async (req, res) => {
+  const names = (req.query.names || "").split(",").map(n => n.trim()).filter(Boolean).slice(0, 14);
+  if (!names.length) return res.json({ artists: [] });
+  const results = await Promise.all(names.map(async name => {
+    const info = await fetchArtistInfo(name);
+    return info
+      ? { name: info.name, id: info.id, image: info.image, fans: info.fans }
+      : { name, id: null, image: null, fans: 0 };
+  }));
+  res.json({ artists: results });
+});
+
 // GET /api/search?q=query
 app.get("/api/search", async (req, res) => {
   const q = (req.query.q || "").trim();
@@ -752,17 +765,43 @@ const HTML = `<!DOCTYPE html>
       z-index:100;
     }
     .logo{
-      display:flex;align-items:center;gap:10px;
-      font-weight:800;font-size:1rem;letter-spacing:.5px;
+      display:flex;align-items:center;gap:11px;
+      font-weight:900;font-size:.95rem;letter-spacing:.12em;
+      cursor:pointer;user-select:none;
     }
     .logo-icon{
-      width:32px;height:32px;border-radius:10px;
-      background:linear-gradient(135deg,var(--p),var(--p2));
+      width:38px;height:38px;border-radius:12px;
+      background:linear-gradient(145deg,#a855f7 0%,#6366f1 60%,#3b82f6 100%);
       display:flex;align-items:center;justify-content:center;
-      font-size:.9rem;box-shadow:0 4px 16px rgba(168,85,247,.35);
-      flex-shrink:0;
+      box-shadow:0 0 0 1.5px rgba(168,85,247,.4),0 6px 24px rgba(99,102,241,.55);
+      flex-shrink:0;position:relative;overflow:hidden;
+      animation:logoGlow 3.5s ease-in-out infinite;
     }
-    .logo-text{background:linear-gradient(90deg,#fff,rgba(255,255,255,.7));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+    .logo-icon::after{
+      content:'';position:absolute;inset:0;
+      background:linear-gradient(135deg,rgba(255,255,255,.28) 0%,transparent 55%);
+      border-radius:12px;
+    }
+    .logo-icon svg{position:relative;z-index:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,.3));}
+    @keyframes logoGlow{
+      0%,100%{box-shadow:0 0 0 1.5px rgba(168,85,247,.4),0 6px 24px rgba(99,102,241,.55);}
+      50%{box-shadow:0 0 0 1.5px rgba(168,85,247,.65),0 8px 32px rgba(99,102,241,.85);}
+    }
+    .logo-text{
+      background:linear-gradient(90deg,#fff 0%,#d8b4fe 40%,#fff 80%,#c4b5fd 100%);
+      background-size:220% auto;
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+      background-clip:text;
+      animation:logoShimmer 5s linear infinite;
+    }
+    @keyframes logoShimmer{to{background-position:220% center;}}
+    .logo-badge{
+      font-size:.45rem;font-weight:800;letter-spacing:.08em;
+      background:linear-gradient(90deg,#a855f7,#6366f1);
+      color:#fff;padding:2px 5px;border-radius:4px;
+      margin-left:2px;align-self:flex-start;margin-top:2px;
+      -webkit-text-fill-color:#fff;
+    }
 
 
 
@@ -1012,6 +1051,24 @@ const HTML = `<!DOCTYPE html>
     .trend-page-hdr{padding:16px 20px 4px;}
     .trend-page-title{font-size:1.5rem;font-weight:900;letter-spacing:-.04em;}
     .trend-page-sub{font-size:.78rem;color:rgba(255,255,255,.4);margin-top:3px;}
+    /* Trending artists row */
+    .trend-artists-scroll{display:flex;gap:18px;overflow-x:auto;padding:4px 0 12px;scrollbar-width:none;}
+    .trend-artists-scroll::-webkit-scrollbar{display:none;}
+    .trend-artist-chip{display:flex;flex-direction:column;align-items:center;gap:7px;cursor:pointer;flex-shrink:0;width:70px;}
+    .trend-artist-chip:active .tac-avatar{transform:scale(.93);}
+    .tac-avatar{
+      width:64px;height:64px;border-radius:50%;overflow:hidden;
+      background:linear-gradient(135deg,var(--p),var(--p2));
+      display:flex;align-items:center;justify-content:center;
+      font-size:1.3rem;font-weight:800;color:#fff;
+      border:2px solid rgba(255,255,255,.12);
+      transition:transform .18s;flex-shrink:0;
+      box-shadow:0 4px 14px rgba(0,0,0,.35);
+    }
+    .tac-avatar img{width:100%;height:100%;object-fit:cover;}
+    .tac-name{font-size:.67rem;font-weight:600;text-align:center;width:100%;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+      color:rgba(255,255,255,.8);}
     .song-row{
       display:flex;align-items:center;gap:13px;
       padding:12px 16px;cursor:pointer;
@@ -2396,9 +2453,17 @@ const HTML = `<!DOCTYPE html>
 
 <!-- TOP BAR -->
 <div class="topbar">
-  <div class="logo">
-    <div class="logo-icon">🎵</div>
+  <div class="logo" onclick="setView('home')">
+    <div class="logo-icon">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <rect x="2"   y="12" width="3" height="7"  rx="1.5" fill="white" opacity=".55"/>
+        <rect x="6.5" y="7"  width="3" height="12" rx="1.5" fill="white"/>
+        <rect x="11"  y="3"  width="3" height="16" rx="1.5" fill="white"/>
+        <rect x="15.5"y="9"  width="3" height="10" rx="1.5" fill="white" opacity=".75"/>
+      </svg>
+    </div>
     <span class="logo-text">PANCHO MIX</span>
+    <span class="logo-badge">PRO</span>
   </div>
   <div class="topbar-right">
     <div class="avatar" id="avatarBtn" title="Perfil">🎧</div>
@@ -3668,12 +3733,34 @@ function renderTrendingPage(songs,byGenre){
     rock:{label:"Rock",icon:"🎸",color:"#94a3b8"},
     electronica:{label:"Electrónica",icon:"⚡",color:"#22d3ee"},
   };
+
+  // Unique artists (up to 14) for the artists row
+  const artistNames=[...new Set(songs.map(s=>s.artistName).filter(Boolean))].slice(0,14);
+  // Gradient palette for avatar placeholders
+  const GRADIENTS=["linear-gradient(135deg,#a855f7,#6366f1)","linear-gradient(135deg,#f59e0b,#ef4444)","linear-gradient(135deg,#22d3ee,#059669)","linear-gradient(135deg,#ec4899,#a855f7)","linear-gradient(135deg,#818cf8,#3b82f6)","linear-gradient(135deg,#dc2626,#ea580c)"];
+
   content.innerHTML=\`
     <div class="trend-page-hdr">
       <div class="trend-page-title">🔥 Trending</div>
       <div class="trend-page-sub">Lo más escuchado ahora mismo</div>
     </div>
 
+    <!-- Artistas populares -->
+    <div class="sec">
+      <div class="sec-hdr"><div class="sec-title">👤 Artistas populares</div></div>
+      <div class="trend-artists-scroll" id="trendArtistsRow">
+        \${artistNames.map((name,i)=>\`
+          <div class="trend-artist-chip" data-aname="\${esc(name)}" data-ai="\${i}">
+            <div class="tac-avatar" style="background:\${GRADIENTS[i%GRADIENTS.length]}" id="tac-\${i}">
+              \${esc(name.charAt(0).toUpperCase())}
+            </div>
+            <div class="tac-name">\${esc(name.split(" ")[0])}</div>
+          </div>
+        \`).join("")}
+      </div>
+    </div>
+
+    <!-- Top 10 -->
     <div class="sec">
       <div class="sec-hdr">
         <div class="sec-title">Top 10 Global</div>
@@ -3698,6 +3785,7 @@ function renderTrendingPage(songs,byGenre){
       </div>
     </div>
 
+    <!-- Genre sections -->
     \${Object.entries(byGenre).filter(([,s])=>s&&s.length).map(([genre,gs])=>{
       const meta=GENRE_META[genre]||{label:genre,icon:"🎵",color:"#a855f7"};
       return \`
@@ -3727,7 +3815,33 @@ function renderTrendingPage(songs,byGenre){
     <div style="height:24px"></div>
   \`;
 
-  // Top 10 clicks
+  // ── Artist photo loader (async, non-blocking) ──
+  if(artistNames.length){
+    fetch("/api/artist-photos?names="+encodeURIComponent(artistNames.join(",")))
+      .then(r=>r.json())
+      .then(data=>{
+        (data.artists||[]).forEach((a,i)=>{
+          if(!a.image)return;
+          const av=content.querySelector("#tac-"+i);
+          if(av) av.innerHTML=\`<img src="\${esc(a.image)}" loading="lazy" onerror="this.parentElement.innerHTML=this.parentElement.dataset.init">\`;
+        });
+      }).catch(()=>{});
+  }
+
+  // ── Artist chip clicks → artist profile ──
+  content.querySelectorAll(".trend-artist-chip").forEach(chip=>{
+    chip.addEventListener("click",async()=>{
+      const name=chip.dataset.aname;
+      renderLoading("Cargando artista...");
+      try{
+        const r=await fetch("/api/artist-profile?name="+encodeURIComponent(name));
+        const data=await r.json();
+        renderArtistProfile(data.artist||{name,image:null,fans:0},data.tracks||[]);
+      }catch(e){renderEmpty("Error al cargar artista");}
+    });
+  });
+
+  // ── Top 10 clicks ──
   content.querySelectorAll(".trend-row").forEach(row=>{
     const i=parseInt(row.dataset.ti);
     row.addEventListener("click",()=>playSong(top10[i],top10));
@@ -3736,12 +3850,12 @@ function renderTrendingPage(songs,byGenre){
     });
   });
 
-  // Play all top 10
+  // ── Play all top 10 ──
   content.querySelector("#trendPlayAll")?.addEventListener("click",()=>{
     if(top10.length) playSong(top10[0],songs);
   });
 
-  // Genre section cards
+  // ── Genre section cards ──
   content.querySelectorAll(".tg-card").forEach(card=>{
     card.addEventListener("click",()=>{
       const gs=byGenre[card.dataset.genre]||[];
@@ -3750,7 +3864,7 @@ function renderTrendingPage(songs,byGenre){
     });
   });
 
-  // Genre play all
+  // ── Genre play all ──
   content.querySelectorAll(".tg-play-all").forEach(btn=>{
     btn.addEventListener("click",()=>{
       const gs=byGenre[btn.dataset.genre]||[];
