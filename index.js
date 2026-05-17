@@ -989,49 +989,68 @@ const HTML = `<!DOCTYPE html>
     .sec-action:hover{color:#fff;border-color:var(--border2);}
 
     /* ── PARA TI CAROUSEL ── */
-    .pt-carousel{display:flex;gap:16px;overflow-x:auto;padding:0 0 12px;scrollbar-width:none;}
+    .pt-carousel{display:flex;gap:18px;overflow-x:auto;padding:4px 0 16px;scrollbar-width:none;}
     .pt-carousel::-webkit-scrollbar{display:none;}
     .pt-card{
-      flex-shrink:0;width:210px;border-radius:20px;overflow:hidden;cursor:pointer;
-      position:relative;transition:transform .2s,box-shadow .2s;
-      box-shadow:0 8px 32px rgba(0,0,0,.4);
+      flex-shrink:0;width:240px;border-radius:22px;overflow:hidden;cursor:pointer;
+      position:relative;transition:transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .25s;
+      box-shadow:0 10px 40px rgba(0,0,0,.5);
     }
-    .pt-card:hover{transform:translateY(-4px) scale(1.02);box-shadow:0 16px 48px rgba(0,0,0,.55);}
-    .pt-card:active{transform:scale(.97);}
+    .pt-card:hover{transform:translateY(-6px) scale(1.025);box-shadow:0 20px 60px rgba(0,0,0,.65);}
+    .pt-card:active{transform:scale(.96);}
+    .pt-card:hover .pt-card-play{opacity:1;transform:translateY(0) scale(1);}
     .pt-card-bg{
       position:absolute;inset:0;
       background:var(--pt-grad,linear-gradient(135deg,#a855f7,#6366f1));
       z-index:0;
     }
+    .pt-card-bg::after{
+      content:'';position:absolute;inset:0;
+      background:linear-gradient(135deg,rgba(255,255,255,.08) 0%,transparent 50%,rgba(0,0,0,.2) 100%);
+      z-index:1;
+    }
     .pt-card-glass{
       position:absolute;inset:0;z-index:1;
-      background:linear-gradient(160deg,rgba(255,255,255,.13) 0%,rgba(255,255,255,.04) 45%,rgba(0,0,0,.15) 100%);
-      backdrop-filter:blur(0px);
+      background:linear-gradient(160deg,rgba(255,255,255,.12) 0%,rgba(255,255,255,.03) 40%,rgba(0,0,0,.2) 100%);
     }
     .pt-card-shine{
-      position:absolute;top:-60%;left:-30%;width:80%;height:120%;
-      background:radial-gradient(ellipse,rgba(255,255,255,.18) 0%,transparent 70%);
-      transform:rotate(-30deg);pointer-events:none;z-index:2;
+      position:absolute;top:-50%;left:-20%;width:70%;height:110%;
+      background:radial-gradient(ellipse,rgba(255,255,255,.22) 0%,transparent 65%);
+      transform:rotate(-25deg);pointer-events:none;z-index:2;
+      transition:opacity .3s;
     }
+    .pt-card:hover .pt-card-shine{opacity:.6;}
     .pt-cover-grid{
       position:relative;z-index:3;
       display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;
-      width:100%;height:130px;overflow:hidden;
+      width:100%;height:155px;overflow:hidden;
     }
-    .pt-cover-grid img{width:100%;height:100%;object-fit:cover;}
+    .pt-cover-grid img{width:100%;height:100%;object-fit:cover;transition:transform .4s;}
+    .pt-card:hover .pt-cover-grid img{transform:scale(1.06);}
     .pt-cover-icon{
       position:relative;z-index:3;
-      width:100%;height:130px;display:flex;align-items:center;justify-content:center;
-      font-size:4rem;
+      width:100%;height:155px;display:flex;align-items:center;justify-content:center;
+      font-size:4.5rem;
+    }
+    .pt-card-play{
+      position:absolute;bottom:12px;right:12px;z-index:5;
+      width:42px;height:42px;border-radius:50%;
+      background:rgba(255,255,255,.95);
+      display:flex;align-items:center;justify-content:center;
+      font-size:.9rem;color:#111;
+      opacity:0;transform:translateY(8px) scale(.85);
+      transition:opacity .22s,transform .22s cubic-bezier(.34,1.56,.64,1);
+      box-shadow:0 4px 16px rgba(0,0,0,.45);
+      pointer-events:none;
     }
     .pt-card-body{
       position:relative;z-index:3;
-      padding:12px 14px 14px;
-      background:linear-gradient(to bottom,rgba(0,0,0,.05),rgba(0,0,0,.35));
+      padding:14px 16px 16px;
+      background:linear-gradient(to bottom,rgba(0,0,0,.0),rgba(0,0,0,.5));
     }
     .pt-card-name{
-      font-size:.92rem;font-weight:800;color:#fff;
-      letter-spacing:-.015em;line-height:1.25;
+      font-size:.97rem;font-weight:900;color:#fff;
+      letter-spacing:-.02em;line-height:1.2;
       text-shadow:0 1px 8px rgba(0,0,0,.4);
       white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
     }
@@ -1041,9 +1060,55 @@ const HTML = `<!DOCTYPE html>
     }
     .pt-card-tag{
       display:inline-flex;align-items:center;gap:4px;
-      margin-top:8px;padding:3px 10px;border-radius:50px;
-      background:rgba(255,255,255,.15);backdrop-filter:blur(8px);
-      font-size:.68rem;font-weight:700;color:#fff;letter-spacing:.03em;text-transform:uppercase;
+      margin-top:10px;padding:4px 12px;border-radius:50px;
+      background:rgba(255,255,255,.18);backdrop-filter:blur(10px);
+      font-size:.67rem;font-weight:800;color:#fff;letter-spacing:.05em;text-transform:uppercase;
+      border:1px solid rgba(255,255,255,.2);
+    }
+    .pt-card-count{
+      font-size:.68rem;color:rgba(255,255,255,.55);margin-top:5px;
+    }
+
+    /* ── GENRE SONG CARDS ── */
+    .nov-card{
+      flex-shrink:0;width:160px;cursor:pointer;
+      transition:transform .22s cubic-bezier(.34,1.56,.64,1);
+    }
+    .nov-card:hover{transform:translateY(-5px);}
+    .nov-card:active{transform:scale(.94);}
+    .nov-card-cover{
+      width:160px;height:160px;border-radius:16px;overflow:hidden;
+      position:relative;background:rgba(255,255,255,.07);
+      box-shadow:0 8px 28px rgba(0,0,0,.45);margin-bottom:10px;
+      transition:box-shadow .22s;
+    }
+    .nov-card:hover .nov-card-cover{box-shadow:0 14px 40px rgba(0,0,0,.6);}
+    .nov-card-cover img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .35s;}
+    .nov-card:hover .nov-card-cover img{transform:scale(1.07);}
+    .nov-card-num{
+      position:absolute;top:8px;left:10px;
+      font-size:.65rem;font-weight:900;color:rgba(255,255,255,.55);
+      text-shadow:0 1px 6px rgba(0,0,0,.8);letter-spacing:.04em;
+    }
+    .nov-card-play{
+      position:absolute;bottom:10px;right:10px;
+      width:38px;height:38px;border-radius:50%;
+      background:rgba(255,255,255,.92);
+      display:flex;align-items:center;justify-content:center;
+      font-size:.78rem;color:#111;
+      opacity:0;transform:translateY(6px) scale(.85);
+      transition:opacity .2s,transform .2s cubic-bezier(.34,1.56,.64,1);
+      box-shadow:0 4px 16px rgba(0,0,0,.4);
+    }
+    .nov-card:hover .nov-card-play{opacity:1;transform:translateY(0) scale(1);}
+    .nov-card-title{
+      font-size:.83rem;font-weight:700;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+      color:#fff;
+    }
+    .nov-card-sub{
+      font-size:.71rem;color:rgba(255,255,255,.5);margin-top:3px;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
     }
 
     /* ── NOVEDADES ALBUMS ── */
@@ -3576,22 +3641,29 @@ function renderHome(songs, gridSongs){
             <div class="pt-card-glass"></div>
             <div class="pt-card-shine"></div>
             <div class="pt-cover-icon" id="ptCover\${i}">\${pl.icon}</div>
+            <div class="pt-card-play">▶</div>
             <div class="pt-card-body">
               <div class="pt-card-name">\${esc(pl.name)}</div>
               <div class="pt-card-desc">\${esc(pl.desc)}</div>
               <div class="pt-card-tag">\${pl.tag}</div>
+              <div class="pt-card-count" id="ptCount\${i}">Cargando…</div>
             </div>
           </div>
         \`).join("")}
       </div>
     </div>
     <div class="sec">
-      <div class="sec-hdr"><div class="sec-title">Volver a escuchar</div></div>
-      <div class="album-grid">\${grid.slice(0,6).map((s,i)=>\`
-        <div class="album-card" data-song-id="\${s.id}" data-index="\${top.length+i}">
-          \${s.albumCover?\`<img src="\${esc(s.albumCover)}" loading="lazy" onerror="this.style.display='none'">\`:\`<div class="album-card-ph">🎵</div>\`}
-          <div class="album-card-overlay"><div class="album-card-title">\${esc(s.title)}</div></div>
-          <div class="album-card-arrow">▶</div>
+      <div class="sec-hdr">
+        <div class="sec-title">Volver a escuchar</div>
+        <div class="pt-refresh-badge" id="ptRefreshBadge" style="font-size:.7rem;color:rgba(255,255,255,.35);display:none">↻ Actualiza en <span id="ptCountdown">10:00</span></div>
+      </div>
+      <div class="hscroll">\${grid.slice(0,10).map((s,i)=>\`
+        <div class="hcard" data-index="\${top.length+i}">
+          <div class="hcard-img">
+            \${s.albumCover?\`<img src="\${esc(s.albumCover)}" loading="lazy" onerror="this.style.display='none'">\`:\`<div class="hcard-img-ph">🎵</div>\`}
+          </div>
+          <div class="hcard-title">\${esc(s.title)}</div>
+          <div class="hcard-sub">\${esc(s.artistName)}</div>
         </div>
       \`).join("")}</div>
     </div>
@@ -3616,8 +3688,12 @@ function renderHome(songs, gridSongs){
     row.addEventListener("click",()=>{const i=parseInt(row.dataset.index);playSong(top[i],top);});
     row.querySelector(".row-dots").addEventListener("click",e=>{e.stopPropagation();openCtxMenu(e,top[parseInt(row.dataset.index)]);});
   });
-  content.querySelectorAll(".album-card").forEach(card=>{
-    card.addEventListener("click",()=>{const i=parseInt(card.dataset.index)-top.length;playSong(grid[i],grid);});
+  content.querySelectorAll(".hcard[data-index]").forEach(card=>{
+    const rawIdx=parseInt(card.dataset.index);
+    if(rawIdx>=top.length){
+      const i=rawIdx-top.length;
+      card.addEventListener("click",()=>playSong(grid[i],grid));
+    }
   });
   const refreshAlbumsBtn=content.querySelector("#refreshAlbumsBtn");
   if(refreshAlbumsBtn)refreshAlbumsBtn.addEventListener("click",()=>{
@@ -3625,9 +3701,6 @@ function renderHome(songs, gridSongs){
     loadNovAlbums(content.querySelector("#novAlbumsScroll"),true);
   });
 
-  content.querySelectorAll(".hcard[data-index]").forEach(card=>{
-    card.addEventListener("click",()=>{const i=parseInt(card.dataset.index);playSong(horiz[i],horiz);});
-  });
   content.querySelectorAll(".hcard[data-recent-index]").forEach(card=>{
     card.addEventListener("click",()=>{const i=parseInt(card.dataset["recentIndex"]);playSong(recentlyPlayed[i],recentlyPlayed);});
   });
@@ -3664,7 +3737,7 @@ function renderHome(songs, gridSongs){
   });
 
   loadParaTiCovers(paraTiPlaylists,content);
-  loadParaTiSongsAsync(content);
+  loadParaTiSongsAsync(content).then(()=>startParaTiRefreshTimer());
   loadNovAlbums(content.querySelector("#novAlbumsScroll"));
 
   highlightRows();
@@ -4012,10 +4085,11 @@ function renderTrendingPage(songs,byGenre){
             <button class="sec-action tg-play-all" data-genre="\${genre}">▶ Reproducir</button>
           </div>
           <div class="nov-scroll">
-            \${gs.slice(0,8).map((s,i)=>\`
-              <div class="nov-card tg-card" data-genre="\${genre}" data-ti="\${i}" style="flex-shrink:0;width:140px">
+            \${gs.slice(0,10).map((s,i)=>\`
+              <div class="nov-card tg-card" data-genre="\${genre}" data-ti="\${i}">
                 <div class="nov-card-cover">
-                  \${s.albumCover?\`<img src="\${esc(s.albumCover)}" loading="lazy" onerror="this.style.display='none'">\`:\`<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:2rem">\${meta.icon}</div>\`}
+                  \${s.albumCover?\`<img src="\${esc(s.albumCover)}" loading="lazy" onerror="this.style.display='none'">\`:\`<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:2.2rem;background:rgba(255,255,255,.06)">\${meta.icon}</div>\`}
+                  <div class="nov-card-num">\${i+1}</div>
                   <div class="nov-card-play">▶</div>
                 </div>
                 <div class="nov-card-title">\${esc(s.title)}</div>
@@ -4330,24 +4404,30 @@ async function openAlbumPage(albumId,albumMeta){
 
 // ─── Para Ti & Dice ────────────────────────────────────────────────────────────
 const PARA_TI_DEFS=[
-  {name:"Tu mix de hoy",   desc:"Basado en lo que escuchas",  icon:"🎯", tag:"🔥 PERSONALIZADO",
+  {name:"Tu mix de hoy",    desc:"Seleccionado para ti ahora mismo",  icon:"🎯", tag:"🔥 PERSONALIZADO",
    gradient:"linear-gradient(135deg,#a855f7 0%,#6366f1 100%)",
    genres:["pop","reggaeton","latina","hip-hop"]},
-  {name:"Descubrimiento",  desc:"Canciones que quizás no conoces", icon:"🌟", tag:"✨ NUEVO",
+  {name:"Descubrimiento",   desc:"Canciones que quizás no conoces",   icon:"🌟", tag:"✨ NUEVO",
    gradient:"linear-gradient(135deg,#0ea5e9 0%,#2563eb 100%)",
    genres:["electronica","rock","hip-hop","pop"]},
-  {name:"Sesión nocturna", desc:"Para cuando cae la noche",   icon:"🌙", tag:"🌙 NOCHE",
+  {name:"Sesión nocturna",  desc:"Para cuando cae la noche",          icon:"🌙", tag:"🌙 NOCHE",
    gradient:"linear-gradient(135deg,#1e1b4b 0%,#4c1d95 50%,#6d28d9 100%)",
-   genres:["latina","reggaeton"]},
-  {name:"Energía pura",    desc:"Ritmo sin parar",            icon:"⚡", tag:"💥 ENERGY",
+   genres:["latina","reggaeton","pop"]},
+  {name:"Energía pura",     desc:"Ritmo sin parar",                   icon:"⚡", tag:"💥 ENERGY",
    gradient:"linear-gradient(135deg,#f59e0b 0%,#ef4444 100%)",
    genres:["reggaeton","hip-hop","rock"]},
-  {name:"Chill session",   desc:"Relájate y disfruta",        icon:"🌊", tag:"😌 CHILL",
+  {name:"Chill session",    desc:"Relájate y disfruta",               icon:"🌊", tag:"😌 CHILL",
    gradient:"linear-gradient(135deg,#059669 0%,#0891b2 100%)",
    genres:["pop","latina"]},
-  {name:"Vibra latina",    desc:"El sabor que te mueve",      icon:"💃", tag:"🌴 LATINA",
+  {name:"Vibra latina",     desc:"El sabor que te mueve",             icon:"💃", tag:"🌴 LATINA",
    gradient:"linear-gradient(135deg,#dc2626 0%,#ea580c 100%)",
    genres:["latina","reggaeton"]},
+  {name:"Modo indie",       desc:"Fuera de lo convencional",          icon:"🌿", tag:"🎸 INDIE",
+   gradient:"linear-gradient(135deg,#4d7c0f 0%,#1d4ed8 100%)",
+   genres:["rock","indie","electronica"]},
+  {name:"Fiesta en casa",   desc:"Prende el ambiente",                icon:"🎉", tag:"🕺 PARTY",
+   gradient:"linear-gradient(135deg,#be185d 0%,#7c3aed 100%)",
+   genres:["reggaeton","latina","pop","hip-hop"]},
 ];
 
 // Seeded shuffle — same seed gives same order (changes every hour)
@@ -4376,10 +4456,12 @@ async function fetchGenreForParaTi(genre){
   }catch{return[];}
 }
 
+function get10MinSeed(){return Math.floor(Date.now()/(1000*60*10));}
+
 function buildParaTiPlaylists(allSongs){
-  const hourSeed=Math.floor(Date.now()/(1000*60*60));
+  const seed=get10MinSeed();
   _paraTimePlaylists=PARA_TI_DEFS.map((def,i)=>{
-    const songs=seededShuffle(allSongs,hourSeed+i*137).slice(0,20);
+    const songs=seededShuffle(allSongs,seed+i*137).slice(0,20);
     return{...def,songs};
   });
   return _paraTimePlaylists;
@@ -4388,23 +4470,66 @@ function buildParaTiPlaylists(allSongs){
 async function loadParaTiSongsAsync(container){
   const allGenres=[...new Set(PARA_TI_DEFS.flatMap(d=>d.genres))];
   await Promise.all(allGenres.map(g=>fetchGenreForParaTi(g)));
-  const hourSeed=Math.floor(Date.now()/(1000*60*60));
+  const seed=get10MinSeed();
   _paraTimePlaylists.forEach((pl,i)=>{
     const pool=pl.genres.flatMap(g=>_paraGenreCache[g]||[]);
     const deduped=[...new Map(pool.map(s=>[s.id,s])).values()];
-    pl.songs=seededShuffle(deduped,hourSeed+i*137).slice(0,30);
+    pl.songs=seededShuffle(deduped,seed+i*137).slice(0,30);
     // Refresh covers
     const el=container.querySelector(\`#ptCover\${i}\`);
-    if(!el)return;
-    const withCovers=pl.songs.filter(s=>s.albumCover).slice(0,4);
-    if(withCovers.length>=4){
-      el.className="pt-cover-grid";
-      el.innerHTML=withCovers.map(s=>\`<img src="\${esc(s.albumCover)}" loading="lazy" onerror="this.style.background='rgba(0,0,0,.3)'">\`).join("");
-    }else if(withCovers.length>=1){
-      el.className="pt-cover-icon";el.style.padding="0";
-      el.innerHTML=\`<img src="\${esc(withCovers[0].albumCover)}" style="width:100%;height:100%;object-fit:cover" loading="lazy">\`;
+    if(el){
+      const withCovers=pl.songs.filter(s=>s.albumCover).slice(0,4);
+      if(withCovers.length>=4){
+        el.className="pt-cover-grid";
+        el.innerHTML=withCovers.map(s=>\`<img src="\${esc(s.albumCover)}" loading="lazy" onerror="this.style.background='rgba(0,0,0,.3)'">\`).join("");
+      }else if(withCovers.length>=1){
+        el.className="pt-cover-icon";el.style.padding="0";
+        el.innerHTML=\`<img src="\${esc(withCovers[0].albumCover)}" style="width:100%;height:100%;object-fit:cover" loading="lazy">\`;
+      }
     }
+    // Update song count
+    const countEl=container.querySelector(\`#ptCount\${i}\`);
+    if(countEl) countEl.textContent=pl.songs.length?\`\${pl.songs.length} canciones\`:"";
   });
+}
+
+// ── Auto-refresh "Para ti" every 10 minutes ──────────────────────────────────
+let _ptRefreshInterval=null;
+let _ptRefreshDeadline=0;
+let _ptCountdownTimer=null;
+
+function startParaTiRefreshTimer(){
+  if(_ptRefreshInterval) clearInterval(_ptRefreshInterval);
+  if(_ptCountdownTimer) clearInterval(_ptCountdownTimer);
+
+  const TEN_MIN=10*60*1000;
+  _ptRefreshDeadline=Date.now()+TEN_MIN;
+
+  // Countdown display
+  _ptCountdownTimer=setInterval(()=>{
+    const rem=Math.max(0,_ptRefreshDeadline-Date.now());
+    const m=Math.floor(rem/60000);
+    const s=Math.floor((rem%60000)/1000);
+    const badge=document.getElementById("ptRefreshBadge");
+    const span=document.getElementById("ptCountdown");
+    if(badge) badge.style.display="flex";
+    if(span) span.textContent=\`\${m}:\${String(s).padStart(2,"0")}\`;
+  },1000);
+
+  // Refresh trigger
+  _ptRefreshInterval=setInterval(()=>{
+    clearInterval(_ptCountdownTimer);
+    // Clear genre cache so fresh songs are fetched
+    Object.keys(_paraGenreCache).forEach(k=>delete _paraGenreCache[k]);
+    // Reload home if we're on it
+    if(currentView==="home"||!currentView){
+      const content=document.getElementById("mainContent");
+      if(content){
+        loadParaTiSongsAsync(content);
+        startParaTiRefreshTimer();
+      }
+    }
+  },TEN_MIN);
 }
 
 function loadParaTiCovers(playlists,container){
