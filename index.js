@@ -3543,7 +3543,8 @@ document.getElementById("shareOverlay").addEventListener("click",e=>{
 function doShare(platform){
   const s=currentSong||ctxTargetSong;
   const text=s?\`🎵 Escuchando "\${s.title}" de \${s.artistName||"?"} en PANCHO MIX\`:"Escucha esto en PANCHO MIX";
-  const link=\`\${location.origin}/\`;
+  const songQ=s?encodeURIComponent(s.title+" "+s.artistName):"";
+  const link=songQ?\`\${location.origin}/?q=\${songQ}\`:\`\${location.origin}/\`;
   const msg=encodeURIComponent(text+" "+link);
   const urls={
     whatsapp:\`https://wa.me/?text=\${msg}\`,
@@ -5328,7 +5329,8 @@ document.getElementById("miniProgress").addEventListener("click",e=>{
 document.getElementById("fpModeAudio").classList.toggle("active", playerMode==="audio");
 document.getElementById("fpModeVideo").classList.toggle("active", playerMode==="video");
 updateProfileStats();
-setView("home");
+// Skip home if a deep-link ?q= is present (handleDeepLink will set the view)
+if(!new URLSearchParams(location.search).get("q")) setView("home");
 
 // ── ARTISTAS FAVORITOS ─────────────────────────────────────────────────────
 const FAV_ARTISTS_KEY="pancho_fav_artists";
@@ -5459,7 +5461,34 @@ function renderFavModalResults(results){
   });
 }
 
-document.addEventListener("DOMContentLoaded",()=>{});
+// ─── Deep-link: ?q= auto-search & play ────────────────────────────────────────
+(async function handleDeepLink(){
+  const q=new URLSearchParams(location.search).get("q");
+  if(!q||q.trim().length<2)return;
+  const query=q.trim();
+  // Navigate to search view (creates the search DOM synchronously)
+  setView("search");
+  // Fill the search input
+  const inp=document.getElementById("searchViewInput");
+  if(inp){inp.value=query;const cb=document.getElementById("searchClearBtn");if(cb)cb.style.display="flex";}
+  // Show loading state and fetch results
+  const area=document.getElementById("searchResults");
+  if(area)area.innerHTML=\`<div class="loading-msg"><div class="spinner"></div>Buscando "<strong>\${esc(query)}</strong>"...</div>\`;
+  try{
+    const res=await fetch("/api/search?q="+encodeURIComponent(query));
+    const data=await res.json();
+    renderResults(data.songs||[],query,data.artist||null);
+    // Auto-play the first result
+    if((data.songs||[]).length>0){
+      setTimeout(()=>{
+        const firstRow=document.querySelector(".song-row");
+        if(firstRow)firstRow.click();
+      },400);
+    }
+  }catch(e){console.error("Deep-link search failed",e);}
+  // Clean URL so refreshing doesn't re-trigger the search
+  history.replaceState({},"",location.pathname);
+})();
 
 // Inject modal into DOM once
 (function injectFavModal(){
