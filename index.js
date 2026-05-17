@@ -1695,7 +1695,7 @@ const HTML = `<!DOCTYPE html>
       transform:scale(1.15);
       transition:background-image .8s;
     }
-    .fp-content{position:relative;z-index:1;display:flex;flex-direction:column;flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
+    .fp-content{position:absolute;inset:0;z-index:1;display:flex;flex-direction:column;overflow-y:scroll;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}
     .fp-content::-webkit-scrollbar{display:none;}
 
     /* Header */
@@ -1799,7 +1799,7 @@ const HTML = `<!DOCTYPE html>
     /* Action pills */
     .fp-actions{
       display:flex;align-items:center;gap:8px;
-      padding:6px 22px 14px;overflow-x:auto;
+      padding:6px 22px 14px;overflow-x:auto;flex-shrink:0;
     }
     .fp-actions::-webkit-scrollbar{display:none;}
     .fp-pill{
@@ -1816,7 +1816,7 @@ const HTML = `<!DOCTYPE html>
     /* Volume row */
     .fp-vol-row{
       display:flex;align-items:center;gap:12px;
-      padding:0 26px 18px;
+      padding:0 26px 18px;flex-shrink:0;
     }
     .fp-vol-row svg{color:rgba(255,255,255,.38);flex-shrink:0;}
     .fp-vol-slider{
@@ -1830,7 +1830,7 @@ const HTML = `<!DOCTYPE html>
     }
 
     /* Progress */
-    .fp-prog-wrap{padding:0 24px 4px;}
+    .fp-prog-wrap{padding:0 24px 4px;flex-shrink:0;}
     .fp-prog-track{
       width:100%;height:4px;background:rgba(255,255,255,.14);border-radius:4px;
       cursor:pointer;position:relative;transition:height .15s;
@@ -1877,7 +1877,7 @@ const HTML = `<!DOCTYPE html>
     .fp-play-btn:active{transform:scale(.93);}
 
     /* Queue */
-    .fp-queue{margin:4px 16px 24px;border-radius:18px;overflow:hidden;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);}
+    .fp-queue{margin:4px 16px 24px;border-radius:18px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);flex-shrink:0;}
     .fp-q-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;border-bottom:1px solid rgba(255,255,255,.06);}
     .fp-q-from{font-size:.68rem;color:rgba(255,255,255,.4);font-weight:500;letter-spacing:.3px;text-transform:uppercase;}
     .fp-q-name{font-size:.9rem;font-weight:700;margin-top:3px;}
@@ -3177,11 +3177,13 @@ document.getElementById("fpQueueSaveBtn").addEventListener("click",()=>{
   showToast("Fila guardada ("+queue.length+" canciones) ✓");
 });
 
-// Swipe down to close full player
+// Swipe down to close full player (only when scrolled to top)
 document.getElementById("fullPlayer").addEventListener("touchstart",e=>{touchStartY=e.touches[0].clientY;},{passive:true});
 document.getElementById("fullPlayer").addEventListener("touchend",e=>{
+  const content=document.getElementById("fpContent")||document.querySelector(".fp-content");
+  const atTop=!content||content.scrollTop<10;
   const dy=e.changedTouches[0].clientY-touchStartY;
-  if(dy>80&&e.changedTouches[0].clientY<200)closeFullPlayer();
+  if(dy>80&&e.changedTouches[0].clientY<200&&atTop)closeFullPlayer();
 },{passive:true});
 
 // ─── Keyboard shortcuts ────────────────────────────────────────────────────────
