@@ -3196,8 +3196,8 @@ function openFullPlayer(){
   document.body.style.overflow="hidden";
   updateFullPlayer();
   renderQueueList();
-  // Apply saved mode (video or audio) when opening
-  setTimeout(()=>setPlayerMode(playerMode),300);
+  // Apply saved mode after animation completes (animation is 380ms)
+  setTimeout(()=>setPlayerMode(playerMode),420);
 }
 
 function closeFullPlayer(){
@@ -3264,6 +3264,30 @@ function renderQueueList(){
 // ─── Video mode ───────────────────────────────────────────────────────────────
 // The YouTube iframe NEVER moves in the DOM — moving it causes a reload/error.
 // Instead we reposition #yt-holder with CSS to overlay #fpVideoWrap visually.
+
+let _posRetries=0;
+function positionVideoHolder(){
+  const videoWrap=document.getElementById("fpVideoWrap");
+  const holder=document.getElementById("yt-holder");
+  const rect=videoWrap.getBoundingClientRect();
+  // If rect is still zero (layout not ready), retry up to 20 times
+  if((rect.width<10||rect.height<10)&&_posRetries<20){
+    _posRetries++;
+    setTimeout(positionVideoHolder,60);
+    return;
+  }
+  _posRetries=0;
+  holder.classList.add("video-visible");
+  holder.style.top=rect.top+"px";
+  holder.style.left=rect.left+"px";
+  holder.style.width=rect.width+"px";
+  holder.style.height=rect.height+"px";
+  try{
+    const iframe=ytPlayer?.getIframe();
+    if(iframe)iframe.style.cssText="width:100%;height:100%;border:none;background:#000;";
+  }catch(e){}
+}
+
 function setPlayerMode(mode){
   playerMode=mode;
   document.getElementById("fpModeAudio").classList.toggle("active",mode==="audio");
@@ -3274,19 +3298,9 @@ function setPlayerMode(mode){
   if(mode==="video"){
     artEl.style.display="none";
     videoWrap.style.display="block";
-    // Wait a frame for fpVideoWrap to paint, then overlay yt-holder on top of it
-    requestAnimationFrame(()=>{
-      const rect=videoWrap.getBoundingClientRect();
-      holder.classList.add("video-visible");
-      holder.style.top=rect.top+"px";
-      holder.style.left=rect.left+"px";
-      holder.style.width=rect.width+"px";
-      holder.style.height=rect.height+"px";
-      try{
-        const iframe=ytPlayer?.getIframe();
-        if(iframe) iframe.style.cssText="width:100%;height:100%;border:none;background:#000;";
-      }catch(e){}
-    });
+    // Use setTimeout(0) so the browser finishes layout before we read the rect
+    _posRetries=0;
+    setTimeout(positionVideoHolder,0);
   } else {
     artEl.style.display="";
     videoWrap.style.display="none";
@@ -3294,6 +3308,14 @@ function setPlayerMode(mode){
     holder.style.cssText="position:fixed;bottom:-2px;left:-2px;width:1px;height:1px;opacity:0;pointer-events:none;";
   }
 }
+
+// Reposition video on resize/orientation change (mobile address bar, rotation, etc.)
+window.addEventListener("resize",()=>{
+  if(playerMode==="video"&&fullPlayerOpen){
+    _posRetries=0;
+    setTimeout(positionVideoHolder,50);
+  }
+});
 
 function returnVideoToHolder(){
   // No-op: iframe always stays inside #yt-holder — never moved in the DOM
