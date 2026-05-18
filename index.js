@@ -1558,6 +1558,43 @@ const HTML = `<!DOCTYPE html>
       border-top:1px solid var(--border2);
       padding:0;
     }
+    /* ── Tap-to-play overlay (deep-link autoplay unlock) ── */
+    #tapToPlayOverlay{
+      position:fixed;inset:0;z-index:9999;
+      display:flex;align-items:center;justify-content:center;
+      background:rgba(0,0,0,0.72);backdrop-filter:blur(18px);
+      animation:fadeIn .25s ease;
+    }
+    #tapToPlayOverlay .ttp-card{
+      background:linear-gradient(145deg,#1a1a2e,#0f0f1e);
+      border:1px solid rgba(255,255,255,0.1);
+      border-radius:20px;padding:36px 40px;
+      display:flex;flex-direction:column;align-items:center;gap:18px;
+      max-width:340px;width:90%;box-shadow:0 24px 64px rgba(0,0,0,0.6);
+    }
+    #tapToPlayOverlay .ttp-cover{
+      width:120px;height:120px;border-radius:12px;object-fit:cover;
+      box-shadow:0 8px 24px rgba(0,0,0,0.5);
+    }
+    #tapToPlayOverlay .ttp-cover-placeholder{
+      width:120px;height:120px;border-radius:12px;
+      background:var(--surface2);display:flex;align-items:center;justify-content:center;
+      font-size:48px;
+    }
+    #tapToPlayOverlay .ttp-title{
+      font-size:18px;font-weight:700;color:#fff;text-align:center;line-height:1.3;
+    }
+    #tapToPlayOverlay .ttp-artist{
+      font-size:14px;color:rgba(255,255,255,0.6);text-align:center;margin-top:-10px;
+    }
+    #tapToPlayOverlay .ttp-btn{
+      margin-top:6px;padding:14px 40px;border-radius:50px;border:none;cursor:pointer;
+      background:var(--accent);color:#fff;font-size:16px;font-weight:700;
+      letter-spacing:.3px;display:flex;align-items:center;gap:10px;
+      transition:transform .15s,box-shadow .15s;box-shadow:0 4px 20px rgba(138,43,226,.5);
+    }
+    #tapToPlayOverlay .ttp-btn:active{transform:scale(.96);}
+    #tapToPlayOverlay .ttp-btn svg{width:20px;height:20px;fill:#fff;}
     .mini-player-bar{
       display:flex;align-items:center;gap:14px;
       padding:11px 20px 10px;
@@ -5461,6 +5498,29 @@ function renderFavModalResults(results){
   });
 }
 
+// ─── Tap-to-play overlay (bypasses browser autoplay policy on deep links) ─────
+function showTapToPlay(song,songs){
+  const old=document.getElementById("tapToPlayOverlay");
+  if(old)old.remove();
+  const cover=song.albumCover
+    ?\`<img class="ttp-cover" src="\${esc(song.albumCover)}" alt="">\`
+    :\`<div class="ttp-cover-placeholder">🎵</div>\`;
+  const el=document.createElement("div");
+  el.id="tapToPlayOverlay";
+  el.innerHTML=\`
+    <div class="ttp-card">
+      \${cover}
+      <div class="ttp-title">\${esc(song.title)}</div>
+      <div class="ttp-artist">\${esc(song.artistName||"")}</div>
+      <button class="ttp-btn">
+        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        Reproducir
+      </button>
+    </div>\`;
+  document.body.appendChild(el);
+  el.addEventListener("click",()=>{el.remove();playSong(song,songs);},{once:true});
+}
+
 // ─── Deep-link: ?q= auto-search & play ────────────────────────────────────────
 (async function handleDeepLink(){
   const params=new URLSearchParams(location.search);
@@ -5492,8 +5552,9 @@ function renderFavModalResults(results){
           ||songs.find(s=>s.title.toLowerCase().includes(tNorm)&&(s.artistName||"").toLowerCase().includes(aNorm))
           ||songs[0];
       }
-      // Play the matched song directly — no guessing from DOM order
-      setTimeout(()=>playSong(target,songs),400);
+      // Browsers block audio autoplay on fresh page loads.
+      // Show a tap-to-play overlay — the tap is the user gesture that unlocks audio.
+      setTimeout(()=>showTapToPlay(target,songs),300);
     }
   }catch(e){console.error("Deep-link failed",e);}
   history.replaceState({},"",location.pathname);
