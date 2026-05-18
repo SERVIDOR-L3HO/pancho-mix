@@ -3532,7 +3532,7 @@ function openShareModal(song){
   if(!s)return;
   document.getElementById("shareTitle").textContent=s.title;
   document.getElementById("shareArtist").textContent=s.artistName;
-  const link=\`\${location.origin}/?q=\${encodeURIComponent(s.title+" "+s.artistName)}\`;
+  const link=\`\${location.origin}/?title=\${encodeURIComponent(s.title)}&artist=\${encodeURIComponent(s.artistName||"")}\`;
   document.getElementById("shareLinkText").textContent=link;
   document.getElementById("shareOverlay").classList.add("open");
 }
@@ -3544,8 +3544,7 @@ document.getElementById("shareOverlay").addEventListener("click",e=>{
 function doShare(platform){
   const s=currentSong||ctxTargetSong;
   const text=s?\`🎵 Escuchando "\${s.title}" de \${s.artistName||"?"} en PANCHO MIX\`:"Escucha esto en PANCHO MIX";
-  const songQ=s?encodeURIComponent(s.title+" "+s.artistName):"";
-  const link=songQ?\`\${location.origin}/?q=\${songQ}\`:\`\${location.origin}/\`;
+  const link=s?\`\${location.origin}/?title=\${encodeURIComponent(s.title)}&artist=\${encodeURIComponent(s.artistName||"")}\`:\`\${location.origin}/\`;
   const msg=encodeURIComponent(text+" "+link);
   const urls={
     whatsapp:\`https://wa.me/?text=\${msg}\`,
@@ -5330,8 +5329,8 @@ document.getElementById("miniProgress").addEventListener("click",e=>{
 document.getElementById("fpModeAudio").classList.toggle("active", playerMode==="audio");
 document.getElementById("fpModeVideo").classList.toggle("active", playerMode==="video");
 updateProfileStats();
-// Skip home if a deep-link ?q= is present (handleDeepLink will set the view)
-if(!new URLSearchParams(location.search).get("q")) setView("home");
+// Skip home if a deep-link is present (handleDeepLink will set the view)
+(function(){const _p=new URLSearchParams(location.search);if(!_p.get("q")&&!_p.get("title")&&!_p.get("artist"))setView("home");})();
 
 // ── ARTISTAS FAVORITOS ─────────────────────────────────────────────────────
 const FAV_ARTISTS_KEY="pancho_fav_artists";
@@ -5464,30 +5463,39 @@ function renderFavModalResults(results){
 
 // ─── Deep-link: ?q= auto-search & play ────────────────────────────────────────
 (async function handleDeepLink(){
-  const q=new URLSearchParams(location.search).get("q");
-  if(!q||q.trim().length<2)return;
-  const query=q.trim();
-  // Navigate to search view (creates the search DOM synchronously)
+  const params=new URLSearchParams(location.search);
+  const title=params.get("title")||"";
+  const artist=params.get("artist")||"";
+  const legacyQ=params.get("q")||"";
+  // Build the search query
+  const query=(title&&artist?\`\${title} \${artist}\`:title||artist||legacyQ).trim();
+  if(query.length<2)return;
+  // Navigate to search view
   setView("search");
-  // Fill the search input
   const inp=document.getElementById("searchViewInput");
   if(inp){inp.value=query;const cb=document.getElementById("searchClearBtn");if(cb)cb.style.display="flex";}
-  // Show loading state and fetch results
   const area=document.getElementById("searchResults");
-  if(area)area.innerHTML=\`<div class="loading-msg"><div class="spinner"></div>Buscando "<strong>\${esc(query)}</strong>"...</div>\`;
+  if(area)area.innerHTML=\`<div class="loading-msg"><div class="spinner"></div>Buscando...</div>\`;
   try{
     const res=await fetch("/api/search?q="+encodeURIComponent(query));
     const data=await res.json();
-    renderResults(data.songs||[],query,data.artist||null);
-    // Auto-play the first result
-    if((data.songs||[]).length>0){
-      setTimeout(()=>{
-        const firstRow=document.querySelector(".song-row");
-        if(firstRow)firstRow.click();
-      },400);
+    const songs=data.songs||[];
+    renderResults(songs,query,data.artist||null);
+    if(songs.length>0){
+      // When title+artist are known, find the exact matching song instead of guessing
+      let target=songs[0];
+      if(title&&artist){
+        const tNorm=title.toLowerCase().trim();
+        const aNorm=artist.toLowerCase().trim();
+        // Exact match first, then partial
+        target=songs.find(s=>s.title.toLowerCase().trim()===tNorm&&(s.artistName||"").toLowerCase().trim()===aNorm)
+          ||songs.find(s=>s.title.toLowerCase().includes(tNorm)&&(s.artistName||"").toLowerCase().includes(aNorm))
+          ||songs[0];
+      }
+      // Play the matched song directly — no guessing from DOM order
+      setTimeout(()=>playSong(target,songs),400);
     }
-  }catch(e){console.error("Deep-link search failed",e);}
-  // Clean URL so refreshing doesn't re-trigger the search
+  }catch(e){console.error("Deep-link failed",e);}
   history.replaceState({},"",location.pathname);
 })();
 
@@ -5537,7 +5545,12 @@ app.get("/", async (req, res) => {
   res.setHeader("Pragma", "no-cache");
   res.setHeader("Expires", "0");
 
-  const q = (req.query.q || "").trim();
+  const titleParam = (req.query.title || "").trim();
+  const artistParam = (req.query.artist || "").trim();
+  const q = titleParam && artistParam
+    ? `${titleParam} ${artistParam}`
+    : (req.query.q || "").trim();
+
   let ogMeta = `
   <meta property="og:site_name" content="PANCHO MIX"/>
   <meta property="og:title" content="PANCHO MIX — Música sin límites"/>
@@ -5549,9 +5562,17 @@ app.get("/", async (req, res) => {
 
   if (q.length >= 2) {
     try {
-      let songs = await searchSoundfly(q, 5);
-      if (!songs.length) songs = await searchMusicaCom(q, 5);
-      const song = songs[0];
+      let songs = await searchSoundfly(q, 10);
+      if (!songs.length) songs = await searchMusicaCom(q, 10);
+      // When title+artist are known, find the exact matching song
+      let song = songs[0];
+      if (titleParam && artistParam) {
+        const tNorm = titleParam.toLowerCase().trim();
+        const aNorm = artistParam.toLowerCase().trim();
+        song = songs.find(s => s.title.toLowerCase().trim() === tNorm && (s.artistName||"").toLowerCase().trim() === aNorm)
+          || songs.find(s => s.title.toLowerCase().includes(tNorm) && (s.artistName||"").toLowerCase().includes(aNorm))
+          || songs[0];
+      }
       if (song) {
         const title = `${song.title} — ${song.artistName || "PANCHO MIX"}`;
         const desc = `🎵 Escucha "${song.title}" de ${song.artistName || "?"} en PANCHO MIX — música gratis.`;
