@@ -1,8 +1,10 @@
 const express = require("express");
 const cheerio = require("cheerio");
+const path = require("path");
 
 const app = express();
 app.use(express.json());
+app.use("/idremake", express.static(path.join(__dirname, "public")));
 
 const BASE_URL = "https://www.musica.com";
 const SOUNDFLY_BASE = "https://soundfly.es";
@@ -5654,6 +5656,43 @@ app.get("/", async (req, res) => {
   }
 
   res.send(HTML.replace("<!-- OG_META -->", ogMeta));
+});
+
+// ─── Channel: ID Remake ────────────────────────────────────────────────────────
+const IDREMAKE_CHANNEL_ID = "UC8mT-SdbG0MRk03K_UeyINg";
+let channelVideosCache = null;
+let channelVideosCacheTs = 0;
+const CHANNEL_CACHE_TTL = 30 * 60 * 1000; // 30 min
+
+app.get("/api/channel-videos", async (req, res) => {
+  try {
+    if (channelVideosCache && Date.now() - channelVideosCacheTs < CHANNEL_CACHE_TTL) {
+      return res.json(channelVideosCache);
+    }
+    const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${IDREMAKE_CHANNEL_ID}`;
+    const xml = await fetchHtml(rssUrl);
+    const videos = [];
+    const entryRe = /<entry>([\s\S]*?)<\/entry>/g;
+    let m;
+    while ((m = entryRe.exec(xml)) !== null) {
+      const e = m[1];
+      const get = (re) => (e.match(re) || [])[1] || "";
+      const videoId  = get(/<yt:videoId>(.*?)<\/yt:videoId>/);
+      const title    = get(/<title>([\s\S]*?)<\/title>/).replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;/g,"'");
+      const thumb    = get(/media:thumbnail url="([^"]*)"/);
+      const published= get(/<published>(.*?)<\/published>/);
+      const views    = parseInt(get(/statistics views="([^"]*)"/)) || 0;
+      const desc     = get(/<media:description>([\s\S]*?)<\/media:description>/).trim();
+      if (videoId) videos.push({ videoId, title, thumbnail: thumb, published, views, description: desc });
+    }
+    const result = { videos, channelName: "ID Remake", channelId: IDREMAKE_CHANNEL_ID };
+    channelVideosCache = result;
+    channelVideosCacheTs = Date.now();
+    res.json(result);
+  } catch (err) {
+    console.error("channel-videos error:", err.message);
+    res.status(500).json({ error: "No se pudieron cargar los videos" });
+  }
 });
 
 // ─── Start ────────────────────────────────────────────────────────────────────

@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ID Remake — Todos los tracks</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#0a0a14;--surface:#12121f;--surface2:#1a1a2e;--border:rgba(255,255,255,.07);
+  --accent:#8a2be2;--accent2:#a64dff;--text:#e8e8f0;--muted:rgba(232,232,240,.5);
+  --radius:12px;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}
+body{display:flex;flex-direction:column;min-height:100vh;}
+
+/* ── Header ── */
+.header{
+  background:linear-gradient(135deg,#0f0f1e 0%,#1a0a2e 100%);
+  border-bottom:1px solid var(--border);
+  padding:20px 24px 18px;
+  display:flex;align-items:center;gap:16px;
+  position:sticky;top:0;z-index:100;
+  backdrop-filter:blur(20px);
+}
+.header-logo{
+  width:44px;height:44px;border-radius:10px;
+  background:var(--accent);display:flex;align-items:center;justify-content:center;
+  font-size:22px;flex-shrink:0;
+}
+.header-info h1{font-size:18px;font-weight:800;letter-spacing:-.3px;}
+.header-info p{font-size:12px;color:var(--muted);margin-top:2px;}
+.header-yt{
+  margin-left:auto;
+  display:flex;align-items:center;gap:8px;
+  background:rgba(255,0,0,.15);border:1px solid rgba(255,0,0,.3);
+  color:#ff6b6b;font-size:12px;font-weight:600;padding:6px 12px;border-radius:20px;
+  text-decoration:none;
+  transition:background .2s;
+}
+.header-yt:hover{background:rgba(255,0,0,.25);}
+.header-yt svg{width:16px;height:16px;fill:#ff6b6b;}
+
+/* ── Sort/Filter bar ── */
+.toolbar{
+  display:flex;align-items:center;gap:10px;
+  padding:14px 24px;border-bottom:1px solid var(--border);
+  background:var(--surface);
+}
+.toolbar-count{font-size:13px;color:var(--muted);}
+.sort-btn{
+  margin-left:auto;display:flex;align-items:center;gap:6px;
+  background:var(--surface2);border:1px solid var(--border);
+  color:var(--text);font-size:12px;padding:6px 12px;border-radius:8px;
+  cursor:pointer;transition:background .15s;
+}
+.sort-btn:hover{background:rgba(138,43,226,.2);}
+.sort-btn svg{width:14px;height:14px;fill:var(--muted);}
+
+/* ── Video grid ── */
+.main{flex:1;overflow-y:auto;padding:20px 24px 120px;}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+  gap:16px;
+}
+.card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);overflow:hidden;cursor:pointer;
+  transition:transform .18s,border-color .18s,box-shadow .18s;
+  position:relative;
+}
+.card:hover{transform:translateY(-3px);border-color:rgba(138,43,226,.4);box-shadow:0 8px 24px rgba(0,0,0,.4);}
+.card.playing{border-color:var(--accent);box-shadow:0 0 0 2px rgba(138,43,226,.3);}
+.card-thumb{position:relative;aspect-ratio:16/9;overflow:hidden;background:#000;}
+.card-thumb img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s;}
+.card:hover .card-thumb img{transform:scale(1.04);}
+.card-play-icon{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.45);opacity:0;transition:opacity .2s;
+}
+.card:hover .card-play-icon{opacity:1;}
+.card-play-icon svg{width:48px;height:48px;fill:#fff;filter:drop-shadow(0 2px 8px rgba(0,0,0,.6));}
+.card-num{
+  position:absolute;top:8px;left:8px;background:rgba(0,0,0,.7);
+  color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px;
+}
+.card-playing-badge{
+  position:absolute;top:8px;right:8px;background:var(--accent);
+  color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;
+  display:none;align-items:center;gap:4px;
+}
+.card.playing .card-playing-badge{display:flex;}
+.playing-bars{display:flex;gap:2px;align-items:flex-end;height:12px;}
+.playing-bars span{width:3px;background:#fff;border-radius:2px;animation:bar .7s ease-in-out infinite alternate;}
+.playing-bars span:nth-child(2){animation-delay:.15s;}
+.playing-bars span:nth-child(3){animation-delay:.3s;}
+@keyframes bar{from{height:3px}to{height:11px}}
+.card-body{padding:12px 14px 14px;}
+.card-title{font-size:13px;font-weight:600;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.card-meta{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:11px;color:var(--muted);}
+.card-meta svg{width:12px;height:12px;fill:var(--muted);}
+.dot{width:3px;height:3px;background:var(--muted);border-radius:50%;}
+
+/* ── Loading & empty states ── */
+.state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 24px;gap:14px;color:var(--muted);}
+.state svg{width:48px;height:48px;fill:var(--muted);opacity:.4;}
+.state p{font-size:14px;}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.card{animation:fadeIn .3s ease both;}
+
+/* ── Now Playing bar ── */
+#nowPlaying{
+  position:fixed;bottom:0;left:0;right:0;z-index:200;
+  background:rgba(10,10,20,.92);backdrop-filter:blur(24px);
+  border-top:1px solid var(--border);
+  display:none;
+  padding:0 16px;
+}
+.np-inner{display:flex;align-items:center;gap:12px;height:70px;}
+.np-thumb{
+  width:48px;height:48px;border-radius:8px;object-fit:cover;flex-shrink:0;
+  cursor:pointer;
+}
+.np-info{flex:1;min-width:0;}
+.np-title{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.np-channel{font-size:11px;color:var(--muted);margin-top:2px;}
+.np-controls{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.np-btn{
+  width:36px;height:36px;border-radius:50%;border:none;cursor:pointer;
+  background:var(--surface2);color:var(--text);display:flex;align-items:center;justify-content:center;
+  transition:background .15s;
+}
+.np-btn:hover{background:var(--accent);}
+.np-btn svg{width:18px;height:18px;fill:currentColor;}
+.np-btn.primary{background:var(--accent);width:40px;height:40px;}
+.np-btn.primary svg{width:20px;height:20px;}
+.np-btn.primary:hover{background:var(--accent2);}
+.np-close{
+  width:28px;height:28px;border:none;background:none;color:var(--muted);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.np-close:hover{color:var(--text);}
+.np-close svg{width:16px;height:16px;fill:currentColor;}
+
+/* ── Hidden YT player ── */
+#ytHolder{position:fixed;bottom:-9999px;right:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;}
+
+/* ── Responsive ── */
+@media(max-width:600px){
+  .header{padding:14px 16px;}
+  .toolbar,.main{padding-left:16px;padding-right:16px;}
+  .grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;}
+  .card-body{padding:8px 10px 10px;}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo">🎛️</div>
+  <div class="header-info">
+    <h1>ID Remake</h1>
+    <p>Todos los tracks del canal</p>
+  </div>
+  <a class="header-yt" href="https://youtube.com/@idremake3473" target="_blank" rel="noopener">
+    <svg viewBox="0 0 24 24"><path d="M23.5 6.2a3 3 0 00-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 00.5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 002.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 002.1-2.1C24 15.9 24 12 24 12s0-3.9-.5-5.8zM9.8 15.5V8.5l6.3 3.5-6.3 3.5z"/></svg>
+    Ver canal
+  </a>
+</div>
+
+<div class="toolbar">
+  <span class="toolbar-count" id="videoCount">Cargando...</span>
+  <button class="sort-btn" id="sortBtn" onclick="toggleSort()">
+    <svg viewBox="0 0 24 24"><path d="M3 18h6v-2H3v2zm0-5h12v-2H3v2zm0-7v2h18V6H3z"/></svg>
+    <span id="sortLabel">Más recientes</span>
+  </button>
+</div>
+
+<div class="main">
+  <div class="grid" id="grid">
+    <div class="state">
+      <div class="spinner"></div>
+      <p>Cargando videos...</p>
+    </div>
+  </div>
+</div>
+
+<div id="nowPlaying">
+  <div class="np-inner">
+    <img class="np-thumb" id="npThumb" src="" alt="" onclick="scrollToPlaying()"/>
+    <div class="np-info">
+      <div class="np-title" id="npTitle"></div>
+      <div class="np-channel">ID Remake</div>
+    </div>
+    <div class="np-controls">
+      <button class="np-btn" onclick="prevVideo()" title="Anterior">
+        <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6V6zm3.5 6l8.5 6V6L9.5 12z"/></svg>
+      </button>
+      <button class="np-btn primary" id="playPauseBtn" onclick="togglePlay()">
+        <svg id="playIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      </button>
+      <button class="np-btn" onclick="nextVideo()" title="Siguiente">
+        <svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zm2.5-6l-2.5-1.8V13.8L8.5 12zm7-6h2v12h-2V6z"/></svg>
+      </button>
+    </div>
+    <button class="np-close" onclick="stopPlayer()" title="Cerrar">
+      <svg viewBox="0 0 24 24"><path d="M19 6.4L17.6 5 12 10.6 6.4 5 5 6.4l5.6 5.6L5 17.6 6.4 19l5.6-5.6 5.6 5.6 1.4-1.4-5.6-5.6z"/></svg>
+    </button>
+  </div>
+</div>
+
+<div id="ytHolder"><div id="ytAnchor"></div></div>
+
+<script>
+const CHANNEL_ID = "UC8mT-SdbG0MRk03K_UeyINg";
+let videos = [];
+let sortNewest = true;
+let currentIdx = -1;
+let ytPlayer = null, ytReady = false, isPlaying = false;
+
+// ── Fetch videos ──────────────────────────────────────────────────────────────
+async function loadVideos() {
+  try {
+    const res = await fetch("/api/channel-videos");
+    const data = await res.json();
+    videos = data.videos || [];
+    renderGrid();
+  } catch(e) {
+    document.getElementById("grid").innerHTML =
+      '<div class="state"><p>Error al cargar los videos. Recarga la página.</p></div>';
+  }
+}
+
+function toggleSort() {
+  sortNewest = !sortNewest;
+  document.getElementById("sortLabel").textContent = sortNewest ? "Más recientes" : "Más antiguos";
+  renderGrid();
+}
+
+function renderGrid() {
+  const sorted = sortNewest ? [...videos] : [...videos].reverse();
+  const count = sorted.length;
+  document.getElementById("videoCount").textContent =
+    count === 0 ? "Sin videos" : `${count} video${count !== 1 ? "s" : ""}`;
+
+  if (!count) {
+    document.getElementById("grid").innerHTML =
+      '<div class="state"><p>No se encontraron videos.</p></div>';
+    return;
+  }
+
+  document.getElementById("grid").innerHTML = sorted.map((v, i) => {
+    const globalIdx = sortNewest ? i : videos.length - 1 - i;
+    const date = v.published ? new Date(v.published).toLocaleDateString("es", {year:"numeric",month:"short",day:"numeric"}) : "";
+    const views = v.views > 0 ? formatViews(v.views) + " vistas" : "";
+    return `
+      <div class="card ${currentIdx === globalIdx ? "playing" : ""}" data-idx="${globalIdx}" onclick="playAt(${globalIdx})" style="animation-delay:${i * 0.03}s">
+        <div class="card-thumb">
+          <img src="${v.thumbnail}" alt="" loading="lazy"/>
+          <div class="card-play-icon">
+            <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          </div>
+          <div class="card-num">${i + 1}</div>
+          <div class="card-playing-badge">
+            <div class="playing-bars"><span></span><span></span><span></span></div>
+            Sonando
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="card-title">${escHtml(v.title)}</div>
+          <div class="card-meta">
+            ${date ? `<svg viewBox="0 0 24 24"><path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/></svg>${date}` : ""}
+            ${date && views ? '<span class="dot"></span>' : ""}
+            ${views ? `<svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.7 7.6 1 12c1.7 4.4 6 7.5 11 7.5s9.3-3.1 11-7.5c-1.7-4.4-6-7.5-11-7.5zm0 12.5c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5zm0-8c-1.7 0-3 1.3-3 3s1.3 3 3 3 3-1.3 3-3-1.3-3-3-3z"/></svg>${views}` : ""}
+          </div>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+function formatViews(n) {
+  if (n >= 1000000) return (n/1000000).toFixed(1).replace(/\.0$/,"") + "M";
+  if (n >= 1000) return (n/1000).toFixed(1).replace(/\.0$/,"") + "K";
+  return n.toString();
+}
+
+function escHtml(s) {
+  return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+// ── Playback ──────────────────────────────────────────────────────────────────
+function playAt(idx) {
+  if (idx < 0 || idx >= videos.length) return;
+  currentIdx = idx;
+  const v = videos[idx];
+  const ytId = v.videoId;
+
+  // Update now playing bar
+  document.getElementById("npTitle").textContent = v.title;
+  document.getElementById("npThumb").src = v.thumbnail;
+  document.getElementById("nowPlaying").style.display = "block";
+  isPlaying = true;
+  syncPlayBtn();
+  renderGrid(); // re-render to update playing highlight
+
+  // Load into YouTube player
+  const load = () => {
+    if (ytReady && ytPlayer) {
+      ytPlayer.loadVideoById(ytId);
+    } else setTimeout(load, 300);
+  };
+  load();
+}
+
+function prevVideo() {
+  if (currentIdx > 0) playAt(currentIdx - 1);
+}
+
+function nextVideo() {
+  if (currentIdx < videos.length - 1) playAt(currentIdx + 1);
+}
+
+function togglePlay() {
+  if (!ytPlayer || !ytReady) return;
+  try {
+    isPlaying ? ytPlayer.pauseVideo() : ytPlayer.playVideo();
+  } catch(e) {}
+}
+
+function stopPlayer() {
+  if (ytPlayer && ytReady) try { ytPlayer.stopVideo(); } catch(e) {}
+  isPlaying = false;
+  currentIdx = -1;
+  document.getElementById("nowPlaying").style.display = "none";
+  renderGrid();
+}
+
+function syncPlayBtn() {
+  const icon = document.getElementById("playIcon");
+  if (!icon) return;
+  icon.innerHTML = isPlaying
+    ? '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>'
+    : '<path d="M8 5v14l11-7z"/>';
+}
+
+function scrollToPlaying() {
+  const card = document.querySelector(".card.playing");
+  if (card) card.scrollIntoView({behavior:"smooth",block:"center"});
+}
+
+// ── YouTube IFrame API ────────────────────────────────────────────────────────
+window.onYouTubeIframeAPIReady = () => {
+  ytPlayer = new YT.Player("ytAnchor", {
+    height:"1", width:"1",
+    host:"https://www.youtube-nocookie.com",
+    playerVars:{autoplay:1,controls:0,rel:0,modestbranding:1,iv_load_policy:3},
+    events:{
+      onReady() { ytReady = true; },
+      onStateChange(e) {
+        if (e.data === 1) { isPlaying = true; syncPlayBtn(); }
+        else if (e.data === 2) { isPlaying = false; syncPlayBtn(); }
+        else if (e.data === 0) { nextVideo(); }
+      },
+      onError() { nextVideo(); }
+    }
+  });
+};
+(function(){const s=document.createElement("script");s.src="https://www.youtube.com/iframe_api";document.head.appendChild(s);})();
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadVideos();
+</script>
+</body>
+</html>
