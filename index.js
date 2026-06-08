@@ -423,6 +423,35 @@ app.get("/api/albums", async (req, res) => {
   }
 });
 
+// GET /api/new-releases — weekly new releases from Deezer editorial
+const newReleasesCache = { data: null, ts: 0 };
+app.get("/api/new-releases", async (req, res) => {
+  try {
+    if (newReleasesCache.data && Date.now() - newReleasesCache.ts < 2 * 60 * 60 * 1000) {
+      return res.json({ albums: newReleasesCache.data });
+    }
+    const r = await fetch("https://api.deezer.com/editorial/0/releases?limit=20", {
+      headers: { "User-Agent": USER_AGENT }
+    });
+    if (!r.ok) throw new Error("Deezer releases error");
+    const data = await r.json();
+    const albums = (data.data || []).map(a => ({
+      id: a.id,
+      title: a.title,
+      artist: a.artist?.name || "",
+      cover: a.cover_xl || a.cover_big || a.cover_medium || null,
+      releaseDate: a.release_date || "",
+      tracksTotal: a.nb_tracks || 0,
+      recordType: a.record_type || "album",
+    }));
+    newReleasesCache.data = albums;
+    newReleasesCache.ts = Date.now();
+    res.json({ albums });
+  } catch (err) {
+    res.status(500).json({ error: err.message, albums: [] });
+  }
+});
+
 // GET /api/album-tracks?id=X — fetch tracks for a Deezer album
 app.get("/api/album-tracks", async (req, res) => {
   const id = parseInt(req.query.id);
@@ -792,11 +821,18 @@ async function fetchArtistInfo(name) {
     const data = await res.json();
     const a = data?.data?.[0];
     if (!a) { artistInfoCache[key] = null; return null; }
+    // Fetch full artist detail for nb_album
+    let nbAlbum = 0;
+    try {
+      const detailRes = await fetch(`https://api.deezer.com/artist/${a.id}`, { headers: { "User-Agent": USER_AGENT } });
+      if (detailRes.ok) { const d = await detailRes.json(); nbAlbum = d.nb_album || 0; }
+    } catch {}
     const info = {
       id: a.id,
       name: a.name,
       image: a.picture_xl || a.picture_big || a.picture_medium || null,
-      fans: a.nb_fan || 0
+      fans: a.nb_fan || 0,
+      nbAlbum,
     };
     artistInfoCache[key] = info;
     return info;
@@ -2458,6 +2494,37 @@ const HTML = `<!DOCTYPE html>
     .fp-q-row.now .fp-q-title{color:var(--p);}
     .fp-q-dots{width:30px;height:30px;border-radius:50%;border:none;background:transparent;color:rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1rem;transition:all .15s;}
     .fp-q-dots:hover{background:rgba(255,255,255,.08);color:#fff;}
+    .fp-q-del{width:28px;height:28px;border-radius:50%;border:none;background:transparent;color:rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.85rem;transition:all .15s;flex-shrink:0;}
+    .fp-q-del:hover{background:rgba(239,68,68,.18);color:#f87171;}
+    .fp-q-up{width:28px;height:28px;border-radius:50%;border:none;background:transparent;color:rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.8rem;transition:all .15s;flex-shrink:0;}
+    .fp-q-up:hover{background:rgba(255,255,255,.08);color:#fff;}
+    .fp-q-row.now .fp-q-del{color:rgba(248,113,113,.5);}
+    /* Artist genre tags */
+    .ap-genre-row{display:flex;flex-wrap:wrap;gap:7px;padding:0 18px 14px;}
+    .ap-genre-tag{padding:5px 13px;border-radius:50px;background:rgba(168,85,247,.15);border:1px solid rgba(168,85,247,.3);font-size:.72rem;font-weight:600;color:rgba(168,85,247,1);}
+    .ap-stats-row{display:flex;gap:22px;padding:0 18px 10px;}
+    .ap-stat{display:flex;flex-direction:column;align-items:flex-start;gap:2px;}
+    .ap-stat-val{font-size:1rem;font-weight:800;color:#fff;}
+    .ap-stat-lbl{font-size:.68rem;color:rgba(255,255,255,.45);font-weight:500;text-transform:uppercase;letter-spacing:.4px;}
+    /* New releases section */
+    .nr-scroll{display:flex;gap:14px;overflow-x:auto;padding:4px 0 12px;scrollbar-width:none;}
+    .nr-scroll::-webkit-scrollbar{display:none;}
+    .nr-card{flex-shrink:0;width:140px;cursor:pointer;transition:transform .18s;}
+    .nr-card:hover{transform:translateY(-3px);}
+    .nr-cover{width:140px;height:140px;border-radius:12px;overflow:hidden;background:var(--bg3);position:relative;box-shadow:0 6px 20px rgba(0,0,0,.4);}
+    .nr-cover img{width:100%;height:100%;object-fit:cover;display:block;}
+    .nr-cover-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:2.2rem;background:linear-gradient(135deg,rgba(168,85,247,.2),rgba(99,102,241,.2));}
+    .nr-play-btn{position:absolute;bottom:7px;right:7px;width:34px;height:34px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .18s;box-shadow:0 4px 12px rgba(0,0,0,.4);}
+    .nr-card:hover .nr-play-btn{opacity:1;}
+    .nr-badge{position:absolute;top:7px;left:7px;background:rgba(168,85,247,.85);color:#fff;font-size:.6rem;font-weight:700;padding:3px 8px;border-radius:50px;text-transform:uppercase;letter-spacing:.4px;backdrop-filter:blur(6px);}
+    .nr-title{font-size:.8rem;font-weight:700;color:#fff;margin-top:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .nr-artist{font-size:.72rem;color:rgba(255,255,255,.5);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .nr-skel{flex-shrink:0;width:140px;}
+    .nr-skel-cover{width:140px;height:140px;border-radius:12px;background:var(--bg3);animation:shimmer 1.6s infinite linear;background-size:200% 100%;background-image:linear-gradient(90deg,var(--bg3) 25%,rgba(255,255,255,.05) 50%,var(--bg3) 75%);}
+    .nr-skel-line{height:10px;border-radius:6px;margin-top:8px;background:var(--bg3);animation:shimmer 1.6s infinite linear;background-size:200% 100%;background-image:linear-gradient(90deg,var(--bg3) 25%,rgba(255,255,255,.05) 50%,var(--bg3) 75%);}
+    /* Offline banner */
+    .offline-banner{display:flex;align-items:center;gap:8px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);border-radius:12px;padding:10px 14px;margin:0 0 16px;font-size:.8rem;color:rgba(245,158,11,.9);font-weight:600;}
+    .offline-banner svg{flex-shrink:0;}
 
     @media(min-width:768px){
       .fp-art{max-width:380px;}
@@ -3291,16 +3358,46 @@ function renderQueueList(){
         <div class="fp-q-title">\${esc(s.title)}</div>
         <div class="fp-q-artist">\${esc(s.artistName)}</div>
       </div>
-      <button class="fp-q-dots" data-qindex="\${i}" onclick="event.stopPropagation();openCtxMenu(event,queue[\${i}])">⋯</button>
+      \${i>0?\`<button class="fp-q-up" data-qi="\${i}" title="Subir">↑</button>\`:\`<div style="width:28px"></div>\`}
+      <button class="fp-q-del" data-qi="\${i}" title="Quitar">✕</button>
     </div>
   \`).join("");
 
   list.querySelectorAll(".fp-q-row").forEach(row=>{
-    row.addEventListener("click",()=>{
+    row.addEventListener("click",e=>{
+      if(e.target.closest(".fp-q-del,.fp-q-up"))return;
       const i=parseInt(row.dataset.index);
       queueIndex=i; playSong(queue[i],null);
     });
   });
+  list.querySelectorAll(".fp-q-del").forEach(btn=>{
+    btn.addEventListener("click",e=>{e.stopPropagation();removeFromQueue(parseInt(btn.dataset.qi));});
+  });
+  list.querySelectorAll(".fp-q-up").forEach(btn=>{
+    btn.addEventListener("click",e=>{e.stopPropagation();moveQueueUp(parseInt(btn.dataset.qi));});
+  });
+}
+
+function removeFromQueue(i){
+  if(i<0||i>=queue.length)return;
+  const isCurrent=queue[i].id===currentSong?.id;
+  queue.splice(i,1);
+  if(isCurrent){
+    if(queue.length){queueIndex=Math.min(i,queue.length-1);playSong(queue[queueIndex],null);}
+    else queueIndex=-1;
+  } else {
+    if(queueIndex>=i&&queueIndex>0)queueIndex--;
+  }
+  showToast("Quitado de la cola");
+  renderQueueList();
+}
+
+function moveQueueUp(i){
+  if(i<=0||i>=queue.length)return;
+  [queue[i-1],queue[i]]=[queue[i],queue[i-1]];
+  if(queueIndex===i)queueIndex=i-1;
+  else if(queueIndex===i-1)queueIndex=i;
+  renderQueueList();
 }
 
 // ─── Video mode ───────────────────────────────────────────────────────────────
@@ -3886,11 +3983,13 @@ function songRowHtml(s,i){
 }
 
 // ─── RENDER VIEWS ──────────────────────────────────────────────────────────────
-function renderHome(songs, gridSongs){
+function renderHome(songs, gridSongs, offline){
   if(!songs||!songs.length){renderEmpty("No hay canciones disponibles");return;}
   const top=songs.slice(0,8);
   const grid=gridSongs||songs.slice(8,20);
   const horiz=songs.slice(0,10);
+  const offlineBanner=offline?\`<div class="offline-banner"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 1l22 22"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.56 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>Sin conexión — mostrando contenido guardado</div>\`:"";
+
 
   const recentHtml=recentlyPlayed.length>0?\`
     <div class="sec">
@@ -3923,6 +4022,7 @@ function renderHome(songs, gridSongs){
 
   const content=document.getElementById("mainContent");
   content.innerHTML=\`
+    \${offlineBanner}
     \${recentHtml}
     <div class="sec" id="paraTiSec">
       <div class="sec-hdr">
@@ -3999,6 +4099,14 @@ function renderHome(songs, gridSongs){
             <div class="nov-alb-skel-line"></div>
           </div>
         \`).join("")}
+      </div>
+    </div>
+    <div class="sec" style="padding-bottom:36px">
+      <div class="sec-hdr">
+        <div class="sec-title">Novedades de la semana 🆕</div>
+      </div>
+      <div class="nr-scroll" id="newReleasesScroll">
+        \${Array.from({length:6}).map(()=>\`<div class="nr-skel"><div class="nr-skel-cover"></div><div class="nr-skel-line" style="width:80%"></div><div class="nr-skel-line" style="width:55%"></div></div>\`).join("")}
       </div>
     </div>
   \`;
@@ -4087,6 +4195,7 @@ function renderHome(songs, gridSongs){
   loadParaTiCovers(paraTiPlaylists,content);
   loadParaTiSongsAsync(content).then(()=>startParaTiRefreshTimer());
   loadNovAlbums(content.querySelector("#novAlbumsScroll"));
+  loadNewReleases(content.querySelector("#newReleasesScroll"));
 
   highlightRows();
   enrichListCovers(songs);
@@ -4560,8 +4669,17 @@ async function loadGenre(genre){
     const res=await fetch(endpoint);
     const data=await res.json();
     allSongs=data.songs||[];
-    renderHome(allSongs);
-  }catch(e){renderEmpty("Error al cargar: "+e.message);}
+    LS.set("offlineCache_"+genre,{songs:allSongs,ts:Date.now()});
+    renderHome(allSongs,null,false);
+  }catch(e){
+    const cached=LS.get("offlineCache_"+genre);
+    if(cached&&cached.songs&&cached.songs.length){
+      allSongs=cached.songs;
+      renderHome(allSongs,null,true);
+    } else {
+      renderEmpty("Error al cargar: "+e.message);
+    }
+  }
 }
 
 async function doSearch(q){
@@ -4705,6 +4823,49 @@ function renderNovAlbums(container,albums){
     card.addEventListener("click",()=>openAlbumPage(
       parseInt(card.dataset.albId),
       albums[parseInt(card.dataset.albIndex)]
+    ));
+  });
+}
+
+// ─── New Releases ─────────────────────────────────────────────────────────────
+let newReleasesData=null;
+
+async function loadNewReleases(container){
+  if(!container)return;
+  try{
+    if(!newReleasesData){
+      const res=await fetch("/api/new-releases");
+      const data=await res.json();
+      newReleasesData=data.albums||[];
+    }
+    renderNewReleases(container,newReleasesData);
+  }catch{
+    if(container)container.innerHTML=\`<div style="color:var(--muted);font-size:.8rem;padding:8px">No se pudieron cargar las novedades</div>\`;
+  }
+}
+
+function renderNewReleases(container,albums){
+  if(!container||!albums.length)return;
+  container.innerHTML=albums.map((a,i)=>{
+    const badge=a.recordType&&a.recordType!=="album"?a.recordType:"";
+    return \`
+      <div class="nr-card" data-nr-id="\${a.id}" data-nr-index="\${i}">
+        <div class="nr-cover">
+          \${a.cover
+            ?\`<img src="\${esc(a.cover)}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=nr-cover-ph>💿</div>'">\`
+            :\`<div class="nr-cover-ph">💿</div>\`}
+          \${badge?\`<div class="nr-badge">\${esc(badge)}</div>\`:""}
+          <div class="nr-play-btn"><svg width="14" height="14" fill="#000" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
+        </div>
+        <div class="nr-title">\${esc(a.title)}</div>
+        <div class="nr-artist">\${esc(a.artist)}</div>
+      </div>
+    \`;
+  }).join("");
+  container.querySelectorAll(".nr-card").forEach(card=>{
+    card.addEventListener("click",()=>openAlbumPage(
+      parseInt(card.dataset.nrId),
+      albums[parseInt(card.dataset.nrIndex)]
     ));
   });
 }
@@ -5301,8 +5462,13 @@ function renderArtistProfile(artist, tracks){
         </button>
         <div class="artist-hero-info">
           <div class="artist-hero-name">\${esc(artist.name)}</div>
-          \${fansStr?\`<div class="artist-hero-fans">\${esc(fansStr)}</div>\`:""}
+          \${fansStr?\`<div class="artist-hero-fans">\${esc(fansStr)} oyentes</div>\`:""}
         </div>
+      </div>
+      <div class="ap-stats-row">
+        \${artist.fans?\`<div class="ap-stat"><div class="ap-stat-val">\${esc(fmtFans(artist.fans))}</div><div class="ap-stat-lbl">Seguidores</div></div>\`:""}
+        \${artist.nbAlbum?\`<div class="ap-stat"><div class="ap-stat-val">\${artist.nbAlbum}</div><div class="ap-stat-lbl">Álbumes</div></div>\`:""}
+        \${tracks.length?\`<div class="ap-stat"><div class="ap-stat-val">\${tracks.length}</div><div class="ap-stat-lbl">Canciones top</div></div>\`:""}
       </div>
       <div class="artist-profile-actions">
         <button class="ap-btn-follow">Seguir</button>
