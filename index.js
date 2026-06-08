@@ -5,6 +5,7 @@ const path = require("path");
 const app = express();
 app.use(express.json());
 app.use("/idremake", express.static(path.join(__dirname, "public")));
+app.get("/favicon.svg", (req, res) => res.sendFile(path.join(__dirname, "public", "favicon.svg")));
 
 const BASE_URL = "https://www.musica.com";
 const SOUNDFLY_BASE = "https://soundfly.es";
@@ -912,6 +913,7 @@ const HTML = `<!DOCTYPE html>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <title>NOVALINE</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
   <!-- OG_META -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
