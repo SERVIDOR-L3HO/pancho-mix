@@ -911,7 +911,7 @@ const HTML = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
-  <title>PANCHO MIX</title>
+  <title>NOVALINE</title>
   <!-- OG_META -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -2693,7 +2693,7 @@ const HTML = `<!DOCTYPE html>
 <div class="profile-overlay" id="profileOverlay">
   <div class="profile-panel" id="profilePanel">
     <div class="profile-avatar-lg">🎧</div>
-    <div class="profile-name">Pancho Mix</div>
+    <div class="profile-name">Novaline</div>
     <div class="profile-sub">Oyente apasionado</div>
     <div class="profile-sep"></div>
     <div class="profile-stat">
@@ -2926,7 +2926,7 @@ const HTML = `<!DOCTYPE html>
 <!-- TOP BAR -->
 <div class="topbar">
   <div class="logo" onclick="setView('home')">
-    <span class="logo-text">PANCHO MIX</span>
+    <span class="logo-text">NOVALINE</span>
     <span class="logo-badge">PRO</span>
   </div>
   <div class="topbar-right">
@@ -3582,7 +3582,7 @@ document.getElementById("shareOverlay").addEventListener("click",e=>{
 
 function doShare(platform){
   const s=currentSong||ctxTargetSong;
-  const text=s?\`🎵 Escuchando "\${s.title}" de \${s.artistName||"?"} en PANCHO MIX\`:"Escucha esto en PANCHO MIX";
+  const text=s?\`🎵 Escuchando "\${s.title}" de \${s.artistName||"?"} en NOVALINE\`:"Escucha esto en NOVALINE";
   const link=s?\`\${location.origin}/?title=\${encodeURIComponent(s.title)}&artist=\${encodeURIComponent(s.artistName||"")}\`:\`\${location.origin}/\`;
   const msg=encodeURIComponent(text+" "+link);
   const urls={
@@ -5615,12 +5615,12 @@ app.get("/", async (req, res) => {
     : (req.query.q || "").trim();
 
   let ogMeta = `
-  <meta property="og:site_name" content="PANCHO MIX"/>
-  <meta property="og:title" content="PANCHO MIX — Música sin límites"/>
+  <meta property="og:site_name" content="NOVALINE"/>
+  <meta property="og:title" content="NOVALINE — Música sin límites"/>
   <meta property="og:description" content="Escucha música gratis: pop, rock, reggaeton, electrónica y más."/>
   <meta property="og:type" content="website"/>
   <meta name="twitter:card" content="summary"/>
-  <meta name="twitter:title" content="PANCHO MIX — Música sin límites"/>
+  <meta name="twitter:title" content="NOVALINE — Música sin límites"/>
   <meta name="twitter:description" content="Escucha música gratis: pop, rock, reggaeton, electrónica y más."/>`;
 
   if (q.length >= 2) {
@@ -5637,11 +5637,11 @@ app.get("/", async (req, res) => {
           || songs[0];
       }
       if (song) {
-        const title = `${song.title} — ${song.artistName || "PANCHO MIX"}`;
-        const desc = `🎵 Escucha "${song.title}" de ${song.artistName || "?"} en PANCHO MIX — música gratis.`;
+        const title = `${song.title} — ${song.artistName || "NOVALINE"}`;
+        const desc = `🎵 Escucha "${song.title}" de ${song.artistName || "?"} en NOVALINE — música gratis.`;
         const image = song.albumCover || "";
         ogMeta = `
-  <meta property="og:site_name" content="PANCHO MIX"/>
+  <meta property="og:site_name" content="NOVALINE"/>
   <meta property="og:title" content="${title.replace(/"/g, "&quot;")}"/>
   <meta property="og:description" content="${desc.replace(/"/g, "&quot;")}"/>
   <meta property="og:type" content="music.song"/>
